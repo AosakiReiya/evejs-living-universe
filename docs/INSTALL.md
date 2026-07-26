@@ -120,10 +120,16 @@ dependency and waits for the installed 5,000-pilot Living Universe, X-Eve,
 market stock cache, and proxy before the client opens.
 
 No X-Eve-specific player launcher is installed. The first regular launch may
-take several minutes because it creates the Jita + New Caldari market seed and
-compiles the market service when those artifacts are absent. If it reports a
-missing Rust or C++ toolchain, run `tools\InstallRustForMarket.bat` once and
-then use `Play.bat` again.
+take several minutes because it creates the Jita + New Caldari base market,
+synchronizes NPC-station topology, and compiles the market service. Living
+Economy then creates only missing raw-mineral rows at its 37 regional hubs.
+This is automatic: do not run `bootstrapLivingEconomyMarket.js` for normal
+play. Existing and depleted stock rows, player orders, and market history are
+preserved. Later regular launches rebuild the market service only when its
+sources change.
+
+If startup reports a missing Rust or C++ toolchain, run
+`tools\InstallRustForMarket.bat` once and then use `Play.bat` again.
 
 The installed public profile uses normal 1x simulation timing. Local chat lists
 pilots currently present in the player's system; it does not place all 5,000
@@ -141,6 +147,10 @@ Each release records the exact canonical-patch hash it installed. Before
 installing a newer release, stop the server and run the uninstaller from the
 same repository release that performed the current installation. Back up any
 intentional source changes first.
+
+In particular, remove pre4 with the pre4 uninstaller before installing pre5.
+The generated market database can remain in place; pre5 upgrades its station
+topology non-destructively on the next ordinary start.
 
 Do not use a newer release's uninstaller to remove an older release and do not
 overwrite the local install record. After the old release has been cleanly

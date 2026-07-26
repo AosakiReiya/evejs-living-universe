@@ -77,10 +77,18 @@ path automatically. That path starts the market dependency, the EveJS server,
 and then waits for the 5,000-pilot universe, X-Eve, market stock cache, and
 proxy before launching the client.
 
-There is no X-Eve-specific player launcher and no private test profile. On the
-first run only, the regular server path creates the Jita + New Caldari market
-seed and compiles the market service if those artifacts do not exist. This can
-take several minutes. If the Rust/C++ toolchain is missing, run EveJS's bundled
+There is no X-Eve-specific player launcher and no private test profile. Normal
+first-run setup starts from the imported Jita + New Caldari base market data.
+The same regular startup synchronizes the NPC-station directory and Living
+Economy creates only missing raw-mineral seed-stock rows at the 37 regional
+hubs; no manual bootstrap is required. Existing rows, including rows depleted
+to zero, player orders, and market history are left unchanged.
+`server\scripts\bootstrapLivingEconomyMarket.js` remains an administrator/reset
+tool only.
+
+The first launch also compiles the market service, and later launches
+automatically rebuild it when its sources change. This can take several
+minutes. If the Rust/C++ toolchain is missing, run EveJS's bundled
 `tools\InstallRustForMarket.bat` once, then use `Play.bat` normally.
 
 The installed profile creates 5,000 persistent pilots. Local chat shows the
@@ -116,13 +124,13 @@ budgets.
 - Bounded schedulers, physical-ship caps, durable state, economy telemetry, and
   performance admission controls.
 - Separately gated estate, wormhole, live-event, and X-Eve experimental
-  systems; the installed play profile enables the verified pre4 set.
+  systems; the installed play profile enables the verified pre5 set.
 
 Read [Architecture](docs/ARCHITECTURE.md) for the simulation model.
 
 ## Repository contents
 
-- `patches/v0.12.3/x-eve-living-universe-v0.1.0-pre4.patch` - the single
+- `patches/v0.12.3/x-eve-living-universe-v0.1.0-pre5.patch` - the single
   versioned source patch.
 - `installer/` - baseline validation, installation, verification, rollback, and
   uninstall helpers.

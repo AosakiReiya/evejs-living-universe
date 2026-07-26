@@ -4,7 +4,7 @@
 
 X-Eve is the economic scheduler and event kernel built on top of the Living
 Universe. It is not the separate X Command web interface. Its source gate
-defaults to disabled, while the pre4 installed play profile enables both core
+defaults to disabled, while the pre5 installed play profile enables both core
 systems through the ordinary EveJS server. Their gates can be overridden in
 `evejs.config.x-eve.local.json` or with `EVEJS_*` environment variables.
 
