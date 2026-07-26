@@ -100,6 +100,23 @@ index 5aa24697e460e5557002b6d624020a114f69d6d7..63eec1e3f8eb6c54f85980b1e350d652
  call :EnsureDiagnosticsDir
  set "EVEJS_LAUNCH_DIAG=%EVEJS_DIAGNOSTICS_DIR%\evejs-launch-diagnostics-%RANDOM%%RANDOM%.txt"
  (
+diff --git a/README.md b/README.md
+index be8d1af92da93ea7d25f50d270db973114e629a1..5317123861178ac2336de14d60819829f3939656 100644
+--- a/README.md
++++ b/README.md
+@@ -132,7 +132,11 @@ After pulling project updates, rebuild without resetting data:
+ docker compose up --build --detach
+ ```
+ 
+-Normal startup preserves both databases. The initializer only creates missing static game data; market creation and replacement happen exclusively through the explicit `market-tools rebuild` commands below because the market database also contains player orders and history.
++Normal startup preserves both databases. Living Economy may add only missing
++raw-mineral seed-stock rows at its designated regional hubs; it never replaces
++existing or depleted rows, player orders, or market history. The explicit
++`market-tools rebuild` commands below remain the only operations that replace
++an existing market database.
+ 
+ ### Market seed engines and maintenance
+ 
 diff --git a/StartMarketServer.bat b/StartMarketServer.bat
 index 35fb4b89859ad1747567ec91c5c7a9fc448befbe..f0f7647e1819769374395b2a88acdef3cf8aa65f 100644
 --- a/StartMarketServer.bat
@@ -312,7 +329,7 @@ index 0000000000000000000000000000000000000000..221f21b03411cad9d3f00e3d9058129f
 +  "xEveRecoverySeconds": 5
 +}
 diff --git a/externalservices/market-server/crates/market-common/src/lib.rs b/externalservices/market-server/crates/market-common/src/lib.rs
-index 94e8e3755f9e9b0798113a36a916fa10d8187732..e3000e6d1dbca79a7204b64de536e1f6ee8ebc44 100644
+index 94e8e3755f9e9b0798113a36a916fa10d8187732..c6e265902d946bbc710c37a2ec85e44c20419103 100644
 --- a/externalservices/market-server/crates/market-common/src/lib.rs
 +++ b/externalservices/market-server/crates/market-common/src/lib.rs
 @@ -95,21 +95,34 @@ CREATE TABLE IF NOT EXISTS seed_stock (
@@ -359,7 +376,7 @@ index 94e8e3755f9e9b0798113a36a916fa10d8187732..e3000e6d1dbca79a7204b64de536e1f6
    order_id INTEGER PRIMARY KEY AUTOINCREMENT,
    owner_id INTEGER NOT NULL,
    is_corp INTEGER NOT NULL DEFAULT 0,
-@@ -508,24 +521,61 @@ pub struct FillOrderResponse {
+@@ -508,24 +521,63 @@ pub struct FillOrderResponse {
  }
  
  #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -386,6 +403,8 @@ index 94e8e3755f9e9b0798113a36a916fa10d8187732..e3000e6d1dbca79a7204b64de536e1f6
 +  pub adjustment_id: Option<String>,
 +  #[serde(default)]
 +  pub allow_create: bool,
++  #[serde(default)]
++  pub create_only: bool,
 +}
 +
 +#[derive(Debug, Clone, Serialize, Deserialize)]
@@ -471,7 +490,7 @@ index 6af865096bbae04e7a20d9c582d70fb8ae021f30..3327bdaa61db388d64554f1352b77294
                  .record_trade(serde_json::from_value::<market_common::RecordTradeRequest>(
                      params,
 diff --git a/externalservices/market-server/src/state.rs b/externalservices/market-server/src/state.rs
-index 61d3497a15bf2b5d7129d3eb8a8b628c947b6b87..a36c17841051c323da9d2cfc28e36663343b5f6a 100644
+index 61d3497a15bf2b5d7129d3eb8a8b628c947b6b87..b2b86ad6db954a3763fb030511857a182c511b34 100644
 --- a/externalservices/market-server/src/state.rs
 +++ b/externalservices/market-server/src/state.rs
 @@ -3,16 +3,17 @@ use std::path::{Path, PathBuf};
@@ -609,7 +628,7 @@ index 61d3497a15bf2b5d7129d3eb8a8b628c947b6b87..a36c17841051c323da9d2cfc28e36663
          let database_path = self.database_path.clone();
          tokio::task::spawn_blocking(move || record_trade_in_db(&database_path, request))
              .await
-@@ -3007,77 +3081,335 @@ fn expire_due_orders_in_db(database_path: &Path) -> Result<Vec<OwnerOrderRow>> {
+@@ -3007,77 +3081,384 @@ fn expire_due_orders_in_db(database_path: &Path) -> Result<Vec<OwnerOrderRow>> {
      Ok(expired_orders)
  }
  
@@ -835,6 +854,18 @@ index 61d3497a15bf2b5d7129d3eb8a8b628c947b6b87..a36c17841051c323da9d2cfc28e36663
 +        )
 +    };
 +
++    if row_exists && request.create_only {
++        return Ok(AdjustSeedStockResponse {
++            station_id,
++            type_id: request.type_id,
++            region_id,
++            solar_system_id,
++            quantity: u64::try_from(current_quantity).unwrap_or(0),
++            price: current_price,
++            applied: false,
++        });
++    }
++
 +    let target_quantity = if let Some(new_quantity) = request.new_quantity {
 +        i64::try_from(new_quantity)
 +            .map_err(|_| anyhow!("seed stock quantity exceeds the supported maximum"))?
@@ -869,6 +900,43 @@ index 61d3497a15bf2b5d7129d3eb8a8b628c947b6b87..a36c17841051c323da9d2cfc28e36663
 +                applied_at,
 +            ],
 +        )?;
++    } else if request.create_only {
++        let inserted = transaction.execute(
++            "INSERT INTO seed_stock (
++               station_id, solar_system_id, constellation_id, region_id, type_id,
++               price, quantity, initial_quantity, price_version, updated_at
++             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7, 1, ?8)
++             ON CONFLICT(station_id, type_id) DO NOTHING",
++            params![
++                station_id,
++                solar_system_id,
++                constellation_id,
++                region_id,
++                request.type_id,
++                target_price,
++                target_quantity,
++                applied_at,
++            ],
++        )?;
++        if inserted == 0 {
++            let existing = transaction.query_row(
++                "SELECT station_id, solar_system_id, region_id, type_id, quantity, price
++                 FROM seed_stock WHERE station_id = ?1 AND type_id = ?2",
++                params![request.station_id, request.type_id],
++                |row| {
++                    Ok(AdjustSeedStockResponse {
++                        station_id: row.get::<_, u64>(0)?,
++                        solar_system_id: row.get::<_, u32>(1)?,
++                        region_id: row.get::<_, u32>(2)?,
++                        type_id: row.get::<_, u32>(3)?,
++                        quantity: row.get::<_, u64>(4)?,
++                        price: row.get::<_, f64>(5)?,
++                        applied: false,
++                    })
++                },
++            )?;
++            return Ok(existing);
++        }
 +    } else {
 +        transaction.execute(
 +            "INSERT INTO seed_stock (
@@ -1016,7 +1084,7 @@ index 61d3497a15bf2b5d7129d3eb8a8b628c947b6b87..a36c17841051c323da9d2cfc28e36663
      database_path: &Path,
      request: RecordTradeRequest,
  ) -> Result<RecordTradeResponse> {
-@@ -3529,6 +3861,145 @@ fn insert_system_seed_summary_row(
+@@ -3529,6 +3910,215 @@ fn insert_system_seed_summary_row(
      Ok(())
  }
  
@@ -1103,6 +1171,7 @@ index 61d3497a15bf2b5d7129d3eb8a8b628c947b6b87..a36c17841051c323da9d2cfc28e36663
 +            reason: Some("restart replay test".to_string()),
 +            adjustment_id: Some("restart-replay-0001".to_string()),
 +            allow_create: true,
++            create_only: false,
 +        }
 +    }
 +
@@ -1163,6 +1232,75 @@ index 61d3497a15bf2b5d7129d3eb8a8b628c947b6b87..a36c17841051c323da9d2cfc28e36663
 +        let delta_error = apply_adjustment(&mut connection, &wrong_delta)
 +            .expect_err("quantity collision must fail");
 +        assert!(delta_error.to_string().contains("different delta"));
++    }
++
++    #[test]
++    fn omitted_create_only_flag_remains_a_normal_adjustment() {
++        let request: AdjustSeedStockRequest = serde_json::from_value(serde_json::json!({
++            "station_id": 60_000_001,
++            "type_id": 34,
++            "delta_quantity": 1,
++            "new_quantity": null,
++            "new_price": 5.25,
++            "reason": "backward compatibility",
++            "adjustment_id": "backward-compatible-adjustment",
++            "allow_create": false
++        }))
++        .expect("deserialize legacy adjustment request");
++        assert!(!request.create_only);
++    }
++
++    #[test]
++    fn create_only_initialization_inserts_missing_stock_and_preserves_existing_rows() {
++        let mut connection = replay_test_connection();
++        connection
++            .execute(
++                "DELETE FROM seed_stock WHERE station_id = ?1 AND type_id = ?2",
++                params![60_000_001_u64, 34_u32],
++            )
++            .expect("remove initial test stock");
++
++        let initialize = AdjustSeedStockRequest {
++            station_id: 60_000_001,
++            type_id: 34,
++            delta_quantity: None,
++            new_quantity: Some(80),
++            new_price: Some(5.25),
++            reason: Some("automatic regional stock v1".to_string()),
++            adjustment_id: Some("automatic-regional-stock-v1:60000001:34".to_string()),
++            allow_create: true,
++            create_only: true,
++        };
++        let inserted = apply_adjustment(&mut connection, &initialize)
++            .expect("missing create-only stock is inserted");
++        assert!(inserted.applied);
++        assert_eq!(inserted.quantity, 80);
++
++        let preserve = AdjustSeedStockRequest {
++            new_quantity: Some(9_999),
++            adjustment_id: Some("automatic-regional-stock-v1:60000001:34:retry".to_string()),
++            ..initialize.clone()
++        };
++        let existing = apply_adjustment(&mut connection, &preserve)
++            .expect("existing create-only stock is preserved");
++        assert!(!existing.applied);
++        assert_eq!(existing.quantity, 80);
++        assert_eq!(existing.price, 5.25);
++
++        connection
++            .execute(
++                "UPDATE seed_stock SET quantity = 0 WHERE station_id = ?1 AND type_id = ?2",
++                params![60_000_001_u64, 34_u32],
++            )
++            .expect("deplete existing test stock");
++        let preserve_depleted = AdjustSeedStockRequest {
++            adjustment_id: Some("automatic-regional-stock-v1:60000001:34:depleted".to_string()),
++            ..preserve
++        };
++        let depleted = apply_adjustment(&mut connection, &preserve_depleted)
++            .expect("depleted create-only stock is not refilled");
++        assert!(!depleted.applied);
++        assert_eq!(depleted.quantity, 0);
 +    }
 +}
 diff --git a/server/index.js b/server/index.js
@@ -5304,6 +5442,278 @@ index 0000000000000000000000000000000000000000..7585c0daf2135548f5b4c3242ce90dfe
 +}
 +
 +main();
+diff --git a/server/scripts/syncLivingEconomyMarketTopology.js b/server/scripts/syncLivingEconomyMarketTopology.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..63b87eabe8731d6250d43ab330b8133ad7f535b0
+--- /dev/null
++++ b/server/scripts/syncLivingEconomyMarketTopology.js
+@@ -0,0 +1,266 @@
++"use strict";
++
++const fs = require("fs");
++const path = require("path");
++const Database = require("better-sqlite3");
++
++const TOPOLOGY_REVISION = 1;
++const TOPOLOGY_MANIFEST_KEY = "living_economy_station_topology";
++
++function requirePositiveInteger(value, label) {
++  const numericValue = Number(value);
++  if (!Number.isSafeInteger(numericValue) || numericValue <= 0) {
++    throw new Error(`${label} must be a positive integer`);
++  }
++  return numericValue;
++}
++
++function readJson(filePath, label) {
++  let parsed = null;
++  try {
++    parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
++  } catch (error) {
++    throw new Error(`failed to read ${label} at ${filePath}: ${error.message}`);
++  }
++  return parsed;
++}
++
++function loadStationTopology(staticDataDir) {
++  const stationsPath = path.join(staticDataDir, "stations", "data.json");
++  const systemsPath = path.join(staticDataDir, "solarSystems", "data.json");
++  const stationFile = readJson(stationsPath, "station authority");
++  const systemFile = readJson(systemsPath, "solar-system authority");
++  const rawStations = Array.isArray(stationFile && stationFile.stations)
++    ? stationFile.stations
++    : [];
++  const rawSystems = Array.isArray(systemFile && systemFile.solarSystems)
++    ? systemFile.solarSystems
++    : [];
++  if (rawStations.length <= 0 || rawSystems.length <= 0) {
++    throw new Error("station topology authority is empty");
++  }
++
++  const regionsByID = new Map();
++  const stations = rawStations.map((row, index) => {
++    const station = {
++      stationID: requirePositiveInteger(row.stationID, `stations[${index}].stationID`),
++      solarSystemID: requirePositiveInteger(
++        row.solarSystemID,
++        `stations[${index}].solarSystemID`,
++      ),
++      constellationID: requirePositiveInteger(
++        row.constellationID,
++        `stations[${index}].constellationID`,
++      ),
++      regionID: requirePositiveInteger(row.regionID, `stations[${index}].regionID`),
++      stationName: String(row.stationName || `Station ${row.stationID}`),
++      security: Number.isFinite(Number(row.security)) ? Number(row.security) : 0,
++    };
++    if (!regionsByID.has(station.regionID)) {
++      regionsByID.set(station.regionID, {
++        regionID: station.regionID,
++        regionName: String(row.regionName || `Region ${station.regionID}`),
++      });
++    }
++    return station;
++  });
++  const requiredSystemIDs = new Set(
++    stations.map((station) => station.solarSystemID),
++  );
++  const systems = rawSystems
++    .map((row, index) => ({
++      solarSystemID: requirePositiveInteger(
++        row.solarSystemID,
++        `solarSystems[${index}].solarSystemID`,
++      ),
++      regionID: requirePositiveInteger(row.regionID, `solarSystems[${index}].regionID`),
++      constellationID: requirePositiveInteger(
++        row.constellationID,
++        `solarSystems[${index}].constellationID`,
++      ),
++      solarSystemName: String(
++        row.solarSystemName || `System ${row.solarSystemID}`,
++      ),
++      security: Number.isFinite(Number(row.security)) ? Number(row.security) : 0,
++    }))
++    .filter((system) => requiredSystemIDs.has(system.solarSystemID));
++  const availableSystemIDs = new Set(
++    systems.map((system) => system.solarSystemID),
++  );
++  const missingSystem = stations.find(
++    (station) => !availableSystemIDs.has(station.solarSystemID),
++  );
++  if (missingSystem) {
++    throw new Error(
++      `station ${missingSystem.stationID} references missing system ` +
++      `${missingSystem.solarSystemID}`,
++    );
++  }
++
++  return {
++    regions: [...regionsByID.values()].sort((left, right) => (
++      left.regionID - right.regionID
++    )),
++    systems: systems.sort((left, right) => (
++      left.solarSystemID - right.solarSystemID
++    )),
++    stations: stations.sort((left, right) => left.stationID - right.stationID),
++  };
++}
++
++function assertMarketDatabase(db) {
++  const requiredTables = [
++    "manifest",
++    "regions",
++    "solar_systems",
++    "stations",
++    "seed_stock",
++    "market_orders",
++  ];
++  const tableExists = db.prepare(
++    "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
++  );
++  for (const tableName of requiredTables) {
++    if (!tableExists.get(tableName)) {
++      throw new Error(`market database is missing required table ${tableName}`);
++    }
++  }
++}
++
++function synchronizeMarketTopology({ databasePath, staticDataDir }) {
++  const resolvedDatabasePath = path.resolve(databasePath);
++  const resolvedStaticDataDir = path.resolve(staticDataDir);
++  const topology = loadStationTopology(resolvedStaticDataDir);
++  const db = new Database(resolvedDatabasePath, {
++    fileMustExist: true,
++    timeout: 10_000,
++  });
++  try {
++    assertMarketDatabase(db);
++    const insertRegion = db.prepare(
++      "INSERT OR IGNORE INTO regions (region_id, region_name) VALUES (?, ?)",
++    );
++    const insertSystem = db.prepare(
++      `INSERT OR IGNORE INTO solar_systems (
++         solar_system_id, region_id, constellation_id, solar_system_name, security
++       ) VALUES (?, ?, ?, ?, ?)`,
++    );
++    const insertStation = db.prepare(
++      `INSERT OR IGNORE INTO stations (
++         station_id, solar_system_id, constellation_id, region_id,
++         station_name, security
++       ) VALUES (?, ?, ?, ?, ?, ?)`,
++    );
++    const writeRevision = db.prepare(
++      "INSERT OR REPLACE INTO manifest (key, value) VALUES (?, ?)",
++    );
++    const apply = db.transaction(() => {
++      let regionsCreated = 0;
++      let systemsCreated = 0;
++      let stationsCreated = 0;
++      for (const region of topology.regions) {
++        regionsCreated += insertRegion.run(
++          region.regionID,
++          region.regionName,
++        ).changes;
++      }
++      for (const system of topology.systems) {
++        systemsCreated += insertSystem.run(
++          system.solarSystemID,
++          system.regionID,
++          system.constellationID,
++          system.solarSystemName,
++          system.security,
++        ).changes;
++      }
++      for (const station of topology.stations) {
++        stationsCreated += insertStation.run(
++          station.stationID,
++          station.solarSystemID,
++          station.constellationID,
++          station.regionID,
++          station.stationName,
++          station.security,
++        ).changes;
++      }
++      const synchronizedAt = new Date().toISOString();
++      writeRevision.run(TOPOLOGY_MANIFEST_KEY, JSON.stringify({
++        revision: TOPOLOGY_REVISION,
++        regionCount: topology.regions.length,
++        solarSystemCount: topology.systems.length,
++        stationCount: topology.stations.length,
++        synchronizedAt,
++      }));
++      return {
++        revision: TOPOLOGY_REVISION,
++        regions: topology.regions.length,
++        systems: topology.systems.length,
++        stations: topology.stations.length,
++        regionsCreated,
++        systemsCreated,
++        stationsCreated,
++        synchronizedAt,
++      };
++    });
++    return {
++      databasePath: resolvedDatabasePath,
++      ...apply.immediate(),
++    };
++  } finally {
++    db.close();
++  }
++}
++
++function parseArguments(argv) {
++  const repoRoot = path.resolve(__dirname, "..", "..");
++  const result = {
++    databasePath: path.join(
++      repoRoot,
++      "externalservices",
++      "market-server",
++      "data",
++      "generated",
++      "market.sqlite",
++    ),
++    staticDataDir: path.join(repoRoot, "_local", "gameStore", "data"),
++  };
++  for (let index = 0; index < argv.length; index += 1) {
++    if (argv[index] === "--database" && argv[index + 1]) {
++      result.databasePath = argv[index + 1];
++      index += 1;
++    } else if (argv[index] === "--static-data" && argv[index + 1]) {
++      result.staticDataDir = argv[index + 1];
++      index += 1;
++    } else {
++      throw new Error(`unknown or incomplete argument: ${argv[index]}`);
++    }
++  }
++  return result;
++}
++
++if (require.main === module) {
++  try {
++    const result = synchronizeMarketTopology(parseArguments(process.argv.slice(2)));
++    if (
++      result.regionsCreated > 0 ||
++      result.systemsCreated > 0 ||
++      result.stationsCreated > 0
++    ) {
++      console.log(
++        `[LivingEconomy] Added ${result.stationsCreated} missing market ` +
++        `station records (${result.systemsCreated} systems, ` +
++        `${result.regionsCreated} regions).`,
++      );
++    }
++  } catch (error) {
++    console.error(error.stack || error.message);
++    process.exitCode = 1;
++  }
++}
++
++module.exports = {
++  TOPOLOGY_MANIFEST_KEY,
++  TOPOLOGY_REVISION,
++  loadStationTopology,
++  synchronizeMarketTopology,
++};
 diff --git a/server/scripts/syncLivingUniversePortraits.js b/server/scripts/syncLivingUniversePortraits.js
 new file mode 100644
 index 0000000000000000000000000000000000000000..4761f4ce1eb6d6af620b663338e42e70cd5b8050
@@ -11157,6 +11567,262 @@ index 0000000000000000000000000000000000000000..0e68cfe993d6ca3e48ce62b85d013324
 +  console.error(error && error.stack || error);
 +  process.exitCode = 1;
 +});
+diff --git a/server/scripts/verifyLivingEconomyAutomaticRegionalStock.js b/server/scripts/verifyLivingEconomyAutomaticRegionalStock.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..30bd23248d8843b001bc747c7236f06443c889fd
+--- /dev/null
++++ b/server/scripts/verifyLivingEconomyAutomaticRegionalStock.js
+@@ -0,0 +1,250 @@
++"use strict";
++
++const assert = require("assert");
++
++const config = require("../src/config");
++config.livingUniverseEnabled = false;
++config.livingEconomyEnabled = false;
++
++const economyRuntime = require(
++  "../src/space/npc/ambientTraffic/livingEconomyRuntime",
++);
++const { createWorkBudget } = require(
++  "../src/space/npc/ambientTraffic/livingEconomyWorkBudget",
++);
++const { marketDaemonClient } = require(
++  "../src/services/market/marketDaemonClient",
++);
++
++function stockKey(row) {
++  return `${Number(row.station.stationID)}:${Number(row.good.typeID)}`;
++}
++
++function responseFor(request, applied = true, quantity = request.new_quantity) {
++  return {
++    station_id: request.station_id,
++    solar_system_id: 30_000_000,
++    constellation_id: 20_000_000,
++    region_id: 10_000_000,
++    type_id: request.type_id,
++    quantity,
++    initial_quantity: quantity,
++    price: request.new_price,
++    price_version: 1,
++    updated_at: new Date().toISOString(),
++    applied,
++  };
++}
++
++async function main() {
++  const testing = economyRuntime._testing;
++  const specs = testing.AUTOMATIC_REGIONAL_STOCK_SPECS;
++  assert.strictEqual(specs.length, 259);
++  assert.ok(specs.every((entry) => entry.initialQuantity > 0));
++
++  const depleted = specs[0];
++  const existing = specs[1];
++  const racePreserved = specs[2];
++  testing.setStockCacheForTest([
++    {
++      station_id: depleted.station.stationID,
++      type_id: depleted.good.typeID,
++      quantity: 0,
++      price: depleted.good.priceAnchor,
++    },
++    {
++      station_id: existing.station.stationID,
++      type_id: existing.good.typeID,
++      quantity: 123,
++      price: existing.good.priceAnchor,
++    },
++  ]);
++
++  const calls = [];
++  const originalCall = marketDaemonClient.call;
++  marketDaemonClient.call = async (method, params) => {
++    assert.strictEqual(method, "AdjustSeedStocks");
++    calls.push(params.adjustments);
++    assert.ok(params.adjustments.length <= 512);
++    return params.adjustments.map((request) => {
++      assert.strictEqual(request.allow_create, true);
++      assert.strictEqual(request.create_only, true);
++      assert.strictEqual(request.delta_quantity, null);
++      assert.ok(request.new_quantity > 0);
++      assert.match(
++        request.adjustment_id,
++        /^living-economy:auto-regional-stock:v1:\d+:\d+$/,
++      );
++      if (
++        request.station_id === racePreserved.station.stationID &&
++        request.type_id === racePreserved.good.typeID
++      ) {
++        return responseFor(request, false, 0);
++      }
++      return responseFor(request);
++    });
++  };
++
++  try {
++    const budget = createWorkBudget({ budgetMs: 1 });
++    const first = await testing.initializeMissingRegionalStock(
++      new Map([
++        [
++          stockKey(depleted),
++          {
++            station_id: depleted.station.stationID,
++            type_id: depleted.good.typeID,
++            quantity: 0,
++            price: depleted.good.priceAnchor,
++          },
++        ],
++        [
++          stockKey(existing),
++          {
++            station_id: existing.station.stationID,
++            type_id: existing.good.typeID,
++            quantity: 123,
++            price: existing.good.priceAnchor,
++          },
++        ],
++      ]),
++      budget,
++      Date.now(),
++    );
++    assert.strictEqual(first.missingRows, specs.length - 2);
++    assert.strictEqual(first.createdRows, specs.length - 3);
++    assert.strictEqual(first.preservedRows, 1);
++    assert.strictEqual(
++      calls.length,
++      new Set(specs.slice(2).map((entry) => entry.station.regionID)).size,
++    );
++    assert.ok(calls.every((batch) => batch.length <= 7));
++    const submitted = new Set(calls.flat().map(
++      (request) => `${request.station_id}:${request.type_id}`,
++    ));
++    assert.ok(!submitted.has(stockKey(depleted)));
++    assert.ok(!submitted.has(stockKey(existing)));
++    assert.ok(submitted.has(stockKey(racePreserved)));
++
++    const completeRows = [
++      {
++        station_id: depleted.station.stationID,
++        type_id: depleted.good.typeID,
++        quantity: 0,
++        price: depleted.good.priceAnchor,
++      },
++      {
++        station_id: existing.station.stationID,
++        type_id: existing.good.typeID,
++        quantity: 123,
++        price: existing.good.priceAnchor,
++      },
++      ...calls.flat().map((request) => (
++        request.station_id === racePreserved.station.stationID &&
++        request.type_id === racePreserved.good.typeID
++          ? responseFor(request, false, 0)
++          : responseFor(request)
++      )),
++    ];
++    testing.setStockCacheForTest(completeRows);
++    let unexpectedCalls = 0;
++    marketDaemonClient.call = async () => {
++      unexpectedCalls += 1;
++      throw new Error("a complete cache must not be initialized twice");
++    };
++    const second = await testing.initializeMissingRegionalStock(
++      new Map(completeRows.map((row) => [
++        `${row.station_id}:${row.type_id}`,
++        row,
++      ])),
++      createWorkBudget({ budgetMs: 1 }),
++      Date.now(),
++    );
++    assert.strictEqual(second.missingRows, 0);
++    assert.strictEqual(second.createdRows, 0);
++    assert.strictEqual(unexpectedCalls, 0);
++
++    testing.setStockCacheForTest([], { ready: false });
++    const committedRows = new Map();
++    let adjustmentBatchCount = 0;
++    let retryStarted = false;
++    const retrySubmitted = [];
++    marketDaemonClient.call = async (method, params) => {
++      if (method === "GetSeedStocks") {
++        return params.keys
++          .map((key) => committedRows.get(`${key.station_id}:${key.type_id}`))
++          .filter(Boolean);
++      }
++      assert.strictEqual(method, "AdjustSeedStocks");
++      adjustmentBatchCount += 1;
++      if (adjustmentBatchCount === 2) {
++        throw new Error("temporary initialization failure");
++      }
++      if (retryStarted) {
++        retrySubmitted.push(...params.adjustments.map(
++          (request) => request.adjustment_id,
++        ));
++      }
++      return params.adjustments.map((request) => {
++        const response = responseFor(request);
++        committedRows.set(
++          `${request.station_id}:${request.type_id}`,
++          response,
++        );
++        return response;
++      });
++    };
++    await assert.rejects(
++      testing.bootstrapStockCache(createWorkBudget({ budgetMs: 1 }), Date.now()),
++      /temporary initialization failure/,
++    );
++    const committedBeforeRetry = committedRows.size;
++    assert.ok(
++      committedBeforeRetry > 0 && committedBeforeRetry < specs.length,
++      "the retry test must fail after a partial commit",
++    );
++    const firstCommitIDs = new Set(
++      [...committedRows.values()].map(
++        (row) =>
++          `living-economy:auto-regional-stock:v1:${row.station_id}:${row.type_id}`,
++      ),
++    );
++    assert.strictEqual(testing.getStockCacheStatus().ready, false);
++    assert.strictEqual(
++      testing.getStockCacheStatus().automaticRegionalStock.failures,
++      1,
++    );
++    retryStarted = true;
++    await testing.bootstrapStockCache(
++      createWorkBudget({ budgetMs: 1 }),
++      Date.now(),
++    );
++    const retryStatus = testing.getStockCacheStatus();
++    assert.strictEqual(retryStatus.ready, true);
++    assert.strictEqual(
++      retryStatus.automaticRegionalStock.createdRows,
++      specs.length - committedBeforeRetry,
++    );
++    assert.ok(
++      retrySubmitted.every((adjustmentID) => !firstCommitIDs.has(adjustmentID)),
++      "already committed regional rows must be loaded instead of resubmitted",
++    );
++  } finally {
++    marketDaemonClient.call = originalCall;
++  }
++
++  console.log(JSON.stringify({
++    ok: true,
++    regionalHubs: new Set(specs.map((entry) => entry.station.stationID)).size,
++    candidateRows: specs.length,
++    existingPositivePreserved: true,
++    existingDepletedPreserved: true,
++    racePreserved: true,
++    retryAfterPartialCommit: true,
++  }, null, 2));
++}
++
++main().catch((error) => {
++  console.error(error);
++  process.exitCode = 1;
++});
 diff --git a/server/scripts/verifyLivingEconomyCampaignAdjustmentReplay.js b/server/scripts/verifyLivingEconomyCampaignAdjustmentReplay.js
 new file mode 100644
 index 0000000000000000000000000000000000000000..c849cf289935fa3172f63870054161819f43f2c2
@@ -12899,6 +13565,186 @@ index 0000000000000000000000000000000000000000..b57f29eb57bda9f4b3055a027a22a32a
 +  console.error(error && error.stack || error);
 +  process.exitCode = 1;
 +});
+diff --git a/server/scripts/verifyLivingEconomyMarketTopology.js b/server/scripts/verifyLivingEconomyMarketTopology.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..007768e992550fb64be92f9496644d3ba9cd295c
+--- /dev/null
++++ b/server/scripts/verifyLivingEconomyMarketTopology.js
+@@ -0,0 +1,174 @@
++"use strict";
++
++const assert = require("assert/strict");
++const fs = require("fs");
++const os = require("os");
++const path = require("path");
++const Database = require("../node_modules/better-sqlite3");
++const {
++  TOPOLOGY_MANIFEST_KEY,
++  TOPOLOGY_REVISION,
++  synchronizeMarketTopology,
++} = require("./syncLivingEconomyMarketTopology");
++
++function writeJson(filePath, value) {
++  fs.mkdirSync(path.dirname(filePath), { recursive: true });
++  fs.writeFileSync(filePath, JSON.stringify(value), "utf8");
++}
++
++function main() {
++  const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), "evejs-market-topology-"));
++  const databasePath = path.join(testRoot, "market.sqlite");
++  const staticDataDir = path.join(testRoot, "static");
++  try {
++    writeJson(path.join(staticDataDir, "stations", "data.json"), {
++      stations: [
++        {
++          stationID: 60_000_001,
++          solarSystemID: 30_000_001,
++          constellationID: 20_000_001,
++          regionID: 10_000_001,
++          regionName: "Existing Region",
++          stationName: "Authority Existing Station",
++          security: 0.9,
++        },
++        {
++          stationID: 60_000_002,
++          solarSystemID: 30_000_002,
++          constellationID: 20_000_002,
++          regionID: 10_000_002,
++          regionName: "Regional Authority",
++          stationName: "Regional Hub",
++          security: 0.5,
++        },
++      ],
++    });
++    writeJson(path.join(staticDataDir, "solarSystems", "data.json"), {
++      solarSystems: [
++        {
++          solarSystemID: 30_000_001,
++          constellationID: 20_000_001,
++          regionID: 10_000_001,
++          solarSystemName: "Existing System",
++          security: 0.9,
++        },
++        {
++          solarSystemID: 30_000_002,
++          constellationID: 20_000_002,
++          regionID: 10_000_002,
++          solarSystemName: "Regional System",
++          security: 0.5,
++        },
++      ],
++    });
++
++    const db = new Database(databasePath);
++    db.exec(`
++      CREATE TABLE manifest (key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID;
++      CREATE TABLE regions (region_id INTEGER PRIMARY KEY, region_name TEXT NOT NULL);
++      CREATE TABLE solar_systems (
++        solar_system_id INTEGER PRIMARY KEY,
++        region_id INTEGER NOT NULL,
++        constellation_id INTEGER NOT NULL,
++        solar_system_name TEXT NOT NULL,
++        security REAL NOT NULL
++      ) WITHOUT ROWID;
++      CREATE TABLE stations (
++        station_id INTEGER PRIMARY KEY,
++        solar_system_id INTEGER NOT NULL,
++        constellation_id INTEGER NOT NULL,
++        region_id INTEGER NOT NULL,
++        station_name TEXT NOT NULL,
++        security REAL NOT NULL
++      ) WITHOUT ROWID;
++      CREATE TABLE seed_stock (
++        station_id INTEGER NOT NULL,
++        type_id INTEGER NOT NULL,
++        quantity INTEGER NOT NULL,
++        PRIMARY KEY (station_id, type_id)
++      ) WITHOUT ROWID;
++      CREATE TABLE market_orders (order_id INTEGER PRIMARY KEY, marker TEXT NOT NULL);
++      CREATE TABLE price_history (history_id INTEGER PRIMARY KEY, marker TEXT NOT NULL);
++      INSERT INTO regions VALUES (10000001, 'Preserved Region');
++      INSERT INTO solar_systems VALUES (
++        30000001, 10000001, 20000001, 'Preserved System', 0.7
++      );
++      INSERT INTO stations VALUES (
++        60000001, 30000001, 20000001, 10000001, 'Preserved Station', 0.7
++      );
++      INSERT INTO seed_stock VALUES (60000001, 34, 0);
++      INSERT INTO market_orders VALUES (42, 'player-order-preserved');
++      INSERT INTO price_history VALUES (7, 'history-preserved');
++    `);
++    db.close();
++
++    const first = synchronizeMarketTopology({ databasePath, staticDataDir });
++    assert.deepStrictEqual({
++      regionsCreated: first.regionsCreated,
++      systemsCreated: first.systemsCreated,
++      stationsCreated: first.stationsCreated,
++    }, {
++      regionsCreated: 1,
++      systemsCreated: 1,
++      stationsCreated: 1,
++    });
++
++    const verified = new Database(databasePath, { readonly: true });
++    const existingStation = verified.prepare(
++      "SELECT station_name, security FROM stations WHERE station_id = ?",
++    ).get(60_000_001);
++    const regionalStation = verified.prepare(
++      "SELECT station_name FROM stations WHERE station_id = ?",
++    ).get(60_000_002);
++    const depleted = verified.prepare(
++      "SELECT quantity FROM seed_stock WHERE station_id = ? AND type_id = ?",
++    ).get(60_000_001, 34);
++    const playerOrder = verified.prepare(
++      "SELECT marker FROM market_orders WHERE order_id = ?",
++    ).get(42);
++    const history = verified.prepare(
++      "SELECT marker FROM price_history WHERE history_id = ?",
++    ).get(7);
++    const revision = JSON.parse(verified.prepare(
++      "SELECT value FROM manifest WHERE key = ?",
++    ).get(TOPOLOGY_MANIFEST_KEY).value);
++    verified.close();
++
++    assert.deepStrictEqual(existingStation, {
++      station_name: "Preserved Station",
++      security: 0.7,
++    });
++    assert.deepStrictEqual(regionalStation, {
++      station_name: "Regional Hub",
++    });
++    assert.strictEqual(depleted.quantity, 0);
++    assert.strictEqual(playerOrder.marker, "player-order-preserved");
++    assert.strictEqual(history.marker, "history-preserved");
++    assert.strictEqual(revision.revision, TOPOLOGY_REVISION);
++    assert.strictEqual(revision.stationCount, 2);
++
++    const second = synchronizeMarketTopology({ databasePath, staticDataDir });
++    assert.strictEqual(second.regionsCreated, 0);
++    assert.strictEqual(second.systemsCreated, 0);
++    assert.strictEqual(second.stationsCreated, 0);
++
++    console.log(JSON.stringify({
++      ok: true,
++      missingTopologyAdded: true,
++      existingTopologyPreserved: true,
++      depletedStockPreserved: true,
++      playerOrdersPreserved: true,
++      marketHistoryPreserved: true,
++      idempotent: true,
++    }, null, 2));
++  } finally {
++    fs.rmSync(testRoot, { recursive: true, force: true });
++  }
++}
++
++try {
++  main();
++} catch (error) {
++  console.error(error.stack || error.message);
++  process.exitCode = 1;
++}
 diff --git a/server/scripts/verifyLivingEconomyPriorityDemand.js b/server/scripts/verifyLivingEconomyPriorityDemand.js
 new file mode 100644
 index 0000000000000000000000000000000000000000..2fa5fc50f6b320c6da6305024b095f631999264a
@@ -62391,10 +63237,10 @@ index 0000000000000000000000000000000000000000..c9c0b642b170727d9e0c028cd0b176bd
 +};
 diff --git a/server/src/space/npc/ambientTraffic/livingEconomyRuntime.js b/server/src/space/npc/ambientTraffic/livingEconomyRuntime.js
 new file mode 100644
-index 0000000000000000000000000000000000000000..38db8d7a727fe2d856ad4d54c44ac2444a6dde9a
+index 0000000000000000000000000000000000000000..1aae0bb9def5b8e9ae2d22aa62d52e290d385379
 --- /dev/null
 +++ b/server/src/space/npc/ambientTraffic/livingEconomyRuntime.js
-@@ -0,0 +1,5710 @@
+@@ -0,0 +1,5830 @@
 +"use strict";
 +
 +const crypto = require("crypto");
@@ -62433,6 +63279,7 @@ index 0000000000000000000000000000000000000000..38db8d7a727fe2d856ad4d54c44ac244
 +const REPLACEMENT_REPOSITION_MAX_OPPORTUNITIES = 256;
 +const REPLACEMENT_REPOSITION_MAX_PER_SOURCE = 3;
 +const FREIGHT_RECOVERY_MAX_JOBS_PER_PULSE = 32;
++const AUTOMATIC_REGIONAL_STOCK_REVISION = 1;
 +const CATALOG_STOCK_KEYS = Object.freeze(catalog.STATIONS.flatMap((station) => (
 +  catalog.TRADE_GOODS
 +    .filter((good) => (
@@ -62468,6 +63315,18 @@ index 0000000000000000000000000000000000000000..38db8d7a727fe2d856ad4d54c44ac244
 +        (right.regionID === catalog.PILOT_REGION_ID ? -1 : 0) ||
 +      left.regionID - right.regionID
 +    )),
++);
++const AUTOMATIC_REGIONAL_STOCK_SPECS = Object.freeze(
++  catalog.REGIONAL_HUBS.flatMap((station) => (
++    catalog.GOODS
++      .map((good) => ({
++        station,
++        good,
++        initialQuantity: catalog.getInitialQuantity(station, good),
++      }))
++      .filter((entry) => entry.initialQuantity > 0)
++      .map((entry) => Object.freeze(entry))
++  )),
 +);
 +const ACTIVE_JOB_STATES = new Set([
 +  "reserving",
@@ -62524,6 +63383,19 @@ index 0000000000000000000000000000000000000000..38db8d7a727fe2d856ad4d54c44ac244
 +    lastFullReconcileAtMs: 0,
 +    currentRegionID: null,
 +    dirtyKeys: new Map(),
++    automaticRegionalStock: {
++      revision: AUTOMATIC_REGIONAL_STOCK_REVISION,
++      candidateRows: AUTOMATIC_REGIONAL_STOCK_SPECS.length,
++      missingRows: 0,
++      createdRows: 0,
++      preservedRows: 0,
++      batches: 0,
++      attempts: 0,
++      failures: 0,
++      startedAtMs: 0,
++      completedAtMs: 0,
++      lastError: null,
++    },
 +    metrics: {
 +      bootstrapBatches: 0,
 +      bootstrapRowsRequested: 0,
@@ -64985,6 +65857,94 @@ index 0000000000000000000000000000000000000000..38db8d7a727fe2d856ad4d54c44ac244
 +  return loaded;
 +}
 +
++async function initializeMissingRegionalStock(
++  stockMap,
++  workBudget = null,
++  nowMs = Date.now(),
++) {
++  const status = stockCacheRuntime.automaticRegionalStock;
++  status.attempts += 1;
++  status.startedAtMs = status.startedAtMs || nowMs;
++  status.completedAtMs = 0;
++  status.lastError = null;
++  const missing = AUTOMATIC_REGIONAL_STOCK_SPECS.filter((entry) => (
++    !stockMap.has(stockKey(entry.station.stationID, entry.good.typeID))
++  ));
++  status.missingRows = missing.length;
++  status.createdRows = 0;
++  status.preservedRows = 0;
++  status.batches = 0;
++  if (missing.length <= 0) {
++    status.completedAtMs = Date.now();
++    return { ...status };
++  }
++
++  try {
++    const regionalBatches = [...missing.reduce((batches, entry) => {
++      const regionID = Number(entry.station.regionID) || 0;
++      if (!batches.has(regionID)) batches.set(regionID, []);
++      batches.get(regionID).push(entry);
++      return batches;
++    }, new Map()).values()];
++    for (const batch of regionalBatches) {
++      const requests = batch.map((entry) => ({
++        station_id: entry.station.stationID,
++        type_id: entry.good.typeID,
++        delta_quantity: null,
++        new_quantity: entry.initialQuantity,
++        new_price: computePrice(
++          entry.good,
++          entry.station,
++          entry.initialQuantity,
++        ),
++        reason: `living economy automatic regional stock v${AUTOMATIC_REGIONAL_STOCK_REVISION}`,
++        adjustment_id:
++          `living-economy:auto-regional-stock:v${AUTOMATIC_REGIONAL_STOCK_REVISION}:` +
++          `${entry.station.stationID}:${entry.good.typeID}`,
++        allow_create: true,
++        create_only: true,
++      }));
++      const call = () => marketDaemonClient.call("AdjustSeedStocks", {
++        adjustments: requests,
++      });
++      const responses = workBudget && typeof workBudget.waitFor === "function"
++        ? await workBudget.waitFor("market.AdjustSeedStocks.initializeRegionalStock", call)
++        : await call();
++      if (!Array.isArray(responses) || responses.length !== batch.length) {
++        throw new Error(
++          "automatic regional stock initialization returned an invalid response count",
++        );
++      }
++      for (const response of responses) {
++        updateStockMap(stockMap, response);
++        if (response && response.applied === true) {
++          status.createdRows += 1;
++        } else {
++          status.preservedRows += 1;
++        }
++      }
++      status.batches += 1;
++      if (workBudget && typeof workBudget.checkpoint === "function") {
++        const yielded = await workBudget.checkpoint(true);
++        if (yielded) stockCacheRuntime.metrics.cooperativeYields += 1;
++      }
++    }
++  } catch (error) {
++    status.failures += 1;
++    status.lastError = error && error.message || String(error);
++    throw error;
++  }
++
++  status.completedAtMs = Date.now();
++  if (status.createdRows > 0) {
++    log.info(
++      `[LivingEconomy] Initialized ${status.createdRows} missing regional-hub ` +
++      `stock rows across ${catalog.REGIONAL_HUBS.length} regions.`,
++    );
++  }
++  return { ...status };
++}
++
 +async function bootstrapStockCache(workBudget, nowMs) {
 +  if (stockCacheRuntime.ready) return lastStockSnapshot;
 +  stockCacheRuntime.bootstrapStartedAtMs = stockCacheRuntime.bootstrapStartedAtMs || nowMs;
@@ -65000,6 +65960,7 @@ index 0000000000000000000000000000000000000000..38db8d7a727fe2d856ad4d54c44ac244
 +      );
 +    }
 +  }
++  await initializeMissingRegionalStock(lastStockSnapshot, workBudget, nowMs);
 +  stockCacheRuntime.ready = true;
 +  stockCacheRuntime.bootstrapCompletedAtMs = Date.now();
 +  stockCacheRuntime.lastFullReconcileAtMs = stockCacheRuntime.bootstrapCompletedAtMs;
@@ -67449,6 +68410,9 @@ index 0000000000000000000000000000000000000000..38db8d7a727fe2d856ad4d54c44ac244
 +      15 * 60_000,
 +      toFiniteNumber(config.livingEconomyFullStockReconcileSeconds, 14_400) * 1_000,
 +    ),
++    automaticRegionalStock: {
++      ...stockCacheRuntime.automaticRegionalStock,
++    },
 +    metrics: { ...stockCacheRuntime.metrics },
 +  };
 +}
@@ -68048,6 +69012,7 @@ index 0000000000000000000000000000000000000000..38db8d7a727fe2d856ad4d54c44ac244
 +    pruneOldState,
 +    getStockCacheStatus,
 +    readStockKeyBatch,
++    initializeMissingRegionalStock,
 +    bootstrapStockCache,
 +    refreshRegionalStockSlice,
 +    refreshDirtyStock,
@@ -68078,6 +69043,7 @@ index 0000000000000000000000000000000000000000..38db8d7a727fe2d856ad4d54c44ac244
 +      return routePlanningRuntime.opportunities;
 +    },
 +    REGIONAL_STOCK_SHARDS,
++    AUTOMATIC_REGIONAL_STOCK_SPECS,
 +    EXTERNAL_ADJUSTMENT_COUNTER_KEYS,
 +    setRuntimeStateForTest(state) {
 +      runtimeState = state;
@@ -88496,10 +89462,10 @@ index 0000000000000000000000000000000000000000..4d06f5590a1ae8d2a08635fbc409b1c0
 +});
 diff --git a/tools/ServerStack/EnsureMarketServer.ps1 b/tools/ServerStack/EnsureMarketServer.ps1
 new file mode 100644
-index 0000000000000000000000000000000000000000..c844275fbb37b60dd7a932660f499e3e35317b46
+index 0000000000000000000000000000000000000000..8749288b969b1e180d02daf9c8ae04e269d373ad
 --- /dev/null
 +++ b/tools/ServerStack/EnsureMarketServer.ps1
-@@ -0,0 +1,134 @@
+@@ -0,0 +1,232 @@
 +param(
 +    [Parameter(Mandatory = $true)]
 +    [string]$RepoRoot,
@@ -88513,10 +89479,12 @@ index 0000000000000000000000000000000000000000..c844275fbb37b60dd7a932660f499e3e
 +$script:RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot)
 +$script:MarketRoot = Join-Path $script:RepoRoot "externalservices\market-server"
 +$script:MarketExe = Join-Path $script:MarketRoot "target\release\market-server.exe"
++$script:MarketBuildStamp = Join-Path $script:MarketRoot "target\release\market-server.sources.sha256"
 +$script:MarketConfig = Join-Path $script:MarketRoot "config\market-server.local.toml"
 +$script:MarketDatabase = Join-Path $script:MarketRoot "data\generated\market.sqlite"
 +$script:MarketBuildLauncher = Join-Path $script:RepoRoot "StartMarketServer.bat"
 +$script:MarketSeedLauncher = Join-Path $script:RepoRoot "tools\market-seed\BuildMarketSeed.bat"
++$script:MarketTopologySync = Join-Path $script:RepoRoot "server\scripts\syncLivingEconomyMarketTopology.js"
 +
 +function Test-TcpPort {
 +    param(
@@ -88582,7 +89550,88 @@ index 0000000000000000000000000000000000000000..c844275fbb37b60dd7a932660f499e3e
 +    }
 +}
 +
-+if (Test-MarketReady) {
++function Get-MarketSourceDigest {
++    $buildInputs = @()
++    foreach ($relativePath in @("Cargo.toml", "Cargo.lock", "build.rs")) {
++        $candidate = Join-Path $script:MarketRoot $relativePath
++        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
++            $buildInputs += Get-Item -LiteralPath $candidate
++        }
++    }
++    foreach ($relativePath in @("src", "crates")) {
++        $candidate = Join-Path $script:MarketRoot $relativePath
++        if (Test-Path -LiteralPath $candidate -PathType Container) {
++            $buildInputs += Get-ChildItem -LiteralPath $candidate -Recurse -File |
++                Where-Object {
++                    $_.Extension -eq ".rs" -or
++                    $_.Name -eq "Cargo.toml" -or
++                    $_.Name -eq "build.rs"
++            }
++        }
++    }
++
++    $rootPrefix = $script:MarketRoot.TrimEnd("\", "/") + [IO.Path]::DirectorySeparatorChar
++    $records = @(
++        $buildInputs |
++            Sort-Object FullName -Unique |
++            ForEach-Object {
++                $relativePath = $_.FullName.Substring($rootPrefix.Length).Replace("\", "/")
++                $fileHash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
++                "$relativePath $fileHash"
++            }
++    )
++    if ($records.Count -eq 0) {
++        throw "No market-service source files were found under $script:MarketRoot"
++    }
++    $digestBytes = [Text.Encoding]::UTF8.GetBytes(($records -join "`n"))
++    $sha256 = [Security.Cryptography.SHA256]::Create()
++    try {
++        return ([BitConverter]::ToString($sha256.ComputeHash($digestBytes))).Replace("-", "")
++    } finally {
++        $sha256.Dispose()
++    }
++}
++
++function Test-MarketBuildRequired {
++    param(
++        [Parameter(Mandatory = $true)]
++        [string]$SourceDigest
++    )
++
++    if (
++        -not (Test-Path -LiteralPath $script:MarketExe -PathType Leaf) -or
++        -not (Test-Path -LiteralPath $script:MarketBuildStamp -PathType Leaf)
++    ) {
++        return $true
++    }
++    $builtDigest = (Get-Content -LiteralPath $script:MarketBuildStamp -Raw).Trim()
++    return $builtDigest -ne $SourceDigest
++}
++
++function Write-MarketBuildStamp {
++    param(
++        [Parameter(Mandatory = $true)]
++        [string]$SourceDigest
++    )
++
++    $stampDirectory = Split-Path -Parent $script:MarketBuildStamp
++    if (-not (Test-Path -LiteralPath $stampDirectory -PathType Container)) {
++        New-Item -ItemType Directory -Path $stampDirectory -Force | Out-Null
++    }
++    [IO.File]::WriteAllText(
++        $script:MarketBuildStamp,
++        $SourceDigest + [Environment]::NewLine,
++        [Text.UTF8Encoding]::new($false)
++    )
++}
++
++$marketSourceDigest = Get-MarketSourceDigest
++$marketBuildRequired = Test-MarketBuildRequired -SourceDigest $marketSourceDigest
++$marketReady = Test-MarketReady
++if ($marketReady) {
++    if ($marketBuildRequired) {
++        throw "The running market service is older than the installed sources. Stop EveJS, then start it again with the regular Play.bat."
++    }
 +    Write-Host "  Market service is already ready."
 +    exit 0
 +}
@@ -88599,12 +89648,27 @@ index 0000000000000000000000000000000000000000..c844275fbb37b60dd7a932660f499e3e
 +    Invoke-BatchFile -Path $script:MarketSeedLauncher -Arguments @("jita")
 +}
 +
-+if (-not (Test-Path -LiteralPath $script:MarketExe -PathType Leaf)) {
++if (-not (Test-Path -LiteralPath $script:MarketTopologySync -PathType Leaf)) {
++    throw "Living Economy market topology synchronizer not found: $script:MarketTopologySync"
++}
++Write-Host "  Checking Living Economy market station topology..."
++& node $script:MarketTopologySync `
++    --database $script:MarketDatabase `
++    --static-data (Join-Path $script:RepoRoot "_local\gameStore\data")
++if ($LASTEXITCODE -ne 0) {
++    throw "Living Economy market station topology synchronization failed with code $LASTEXITCODE."
++}
++
++if ($marketBuildRequired) {
 +    Write-Host ""
-+    Write-Host "  First Living Universe launch: compiling the market service."
-+    Write-Host "  Later launches reuse this release build."
++    Write-Host "  Compiling the Living Universe market service."
++    Write-Host "  Later launches reuse this build until its sources change."
 +    Write-Host ""
 +    Invoke-BatchFile -Path $script:MarketBuildLauncher -Arguments @("build-release")
++    if (-not (Test-Path -LiteralPath $script:MarketExe -PathType Leaf)) {
++        throw "The market build completed without creating $script:MarketExe"
++    }
++    Write-MarketBuildStamp -SourceDigest $marketSourceDigest
 +}
 +
 +if (-not (Test-Path -LiteralPath $script:MarketDatabase -PathType Leaf)) {
@@ -88838,3 +89902,561 @@ index 0000000000000000000000000000000000000000..a2453ab2b89769f37e6e439bc521c8d4
 +} catch {
 +    exit 1
 +}
+diff --git a/tools/market-seed/src/main.rs b/tools/market-seed/src/main.rs
+index 21d0db33fb066708204c7b57741b235dcc9bb6de..3f75c94c704232e49282ba9658e72d1b6fb24b00 100644
+--- a/tools/market-seed/src/main.rs
++++ b/tools/market-seed/src/main.rs
+@@ -193,16 +193,19 @@ struct RegionRow {
+ }
+ 
+ #[derive(Debug)]
+-struct SeedInputData {
+-    selection_mode: String,
+-    selection_label: String,
+-    selected_solar_system_ids: Vec<u32>,
+-    selected_solar_system_names: Vec<String>,
+-    regions: Vec<RegionRow>,
+-    solar_systems: Vec<SolarSystemRecord>,
+-    stations: Vec<StationRecord>,
+-    item_types: Vec<ItemTypeRecord>,
+-}
++struct SeedInputData {
++    selection_mode: String,
++    selection_label: String,
++    selected_solar_system_ids: Vec<u32>,
++    selected_solar_system_names: Vec<String>,
++    topology_regions: Vec<RegionRow>,
++    topology_solar_systems: Vec<SolarSystemRecord>,
++    topology_stations: Vec<StationRecord>,
++    regions: Vec<RegionRow>,
++    solar_systems: Vec<SolarSystemRecord>,
++    stations: Vec<StationRecord>,
++    item_types: Vec<ItemTypeRecord>,
++}
+ 
+ #[derive(Debug, Clone)]
+ struct SeedSelection {
+@@ -312,21 +315,21 @@ fn build_database(config: &MarketSeedConfig, args: BuildArgs) -> Result<()> {
+     )?;
+     connection.execute_batch(SCHEMA_SQL)?;
+ 
+-    let static_bar = new_stage_bar(
+-        "Static tables",
+-        (input.regions.len()
+-            + input.solar_systems.len()
+-            + input.stations.len()
+-            + input.item_types.len()) as u64,
+-    );
+-    write_static_tables(&mut connection, &input, &static_bar)?;
+-    static_bar.finish_with_message(format!(
+-        "Static tables 100% | {} reg | {} sys | {} stn | {} types",
+-        input.regions.len(),
+-        input.solar_systems.len(),
+-        input.stations.len(),
+-        input.item_types.len()
+-    ));
++    let static_bar = new_stage_bar(
++        "Static tables",
++        (input.regions.len()
++            + input.solar_systems.len()
++            + input.stations.len()
++            + input.item_types.len()) as u64,
++    );
++    write_static_tables(&mut connection, &input, &static_bar)?;
++    static_bar.finish_with_message(format!(
++        "Static tables 100% | {} reg | {} sys | {} stn | {} types",
++        input.regions.len(),
++        input.solar_systems.len(),
++        input.stations.len(),
++        input.item_types.len()
++    ));
+ 
+     let seed_stock_bar = new_stage_bar("Seed stock", seed_row_count);
+     materialize_seed_stock(
+@@ -383,12 +386,26 @@ fn build_database(config: &MarketSeedConfig, args: BuildArgs) -> Result<()> {
+             &system_summary_bar,
+         )
+     })?;
+-    system_summary_bar.finish_with_message(format!(
+-        "System summaries 100% | {} rows",
+-        format_count(system_seed_summary_rows)
+-    ));
+-
+-    let history_total_rows =
++    system_summary_bar.finish_with_message(format!(
++        "System summaries 100% | {} rows",
++        format_count(system_seed_summary_rows)
++    ));
++
++    let topology_bar = new_stage_bar(
++        "Station topology",
++        (input.topology_regions.len()
++            + input.topology_solar_systems.len()
++            + input.topology_stations.len()) as u64,
++    );
++    append_static_topology(&mut connection, &input, &topology_bar)?;
++    topology_bar.finish_with_message(format!(
++        "Station topology 100% | {} reg | {} sys | {} stn",
++        input.topology_regions.len(),
++        input.topology_solar_systems.len(),
++        input.topology_stations.len()
++    ));
++
++    let history_total_rows =
+         input.item_types.len() as u64 * u64::from(config.seed.history_days_seeded);
+     let history_compute_bar = new_stage_bar("History build", history_total_rows);
+     let history_rows = compute_pool.install(|| {
+@@ -454,10 +471,11 @@ fn build_database(config: &MarketSeedConfig, args: BuildArgs) -> Result<()> {
+           "database": database_path,
+           "selectionMode": input.selection_mode,
+           "selectionLabel": input.selection_label,
+-          "selectedSolarSystemIds": input.selected_solar_system_ids,
+-          "selectedSolarSystemNames": input.selected_solar_system_names,
+-          "stations": input.stations.len(),
+-          "marketTypes": input.item_types.len(),
++          "selectedSolarSystemIds": input.selected_solar_system_ids,
++          "selectedSolarSystemNames": input.selected_solar_system_names,
++          "seedStations": input.stations.len(),
++          "topologyStations": input.topology_stations.len(),
++          "marketTypes": input.item_types.len(),
+           "seedRows": seed_row_count,
+           "regionSummaryRows": computed_summaries.len(),
+           "systemSeedSummaryRows": system_seed_summary_rows,
+@@ -555,21 +573,24 @@ fn load_seed_input(config: &MarketSeedConfig, args: &BuildArgs) -> Result<SeedIn
+         )
+     })?;
+ 
+-    let mut stations = serde_json::from_str::<StationsFile>(&stations_raw)?.stations;
+-    let solar_systems = serde_json::from_str::<SolarSystemsFile>(&solar_systems_raw)?.solar_systems;
+-    let mut item_types = serde_json::from_str::<ItemTypesFile>(&item_types_raw)?.item_types;
+-
+-    stations.sort_by_key(|station| station.station_id);
+-    let selection = resolve_seed_selection(
+-        args.preset.as_deref(),
+-        &args.solar_system_ids,
+-        &args.solar_system_names,
+-        &solar_systems,
+-    )?;
+-
+-    if !selection.solar_system_ids.is_empty() {
+-        let allowed_ids = selection
+-            .solar_system_ids
++    let mut topology_stations = serde_json::from_str::<StationsFile>(&stations_raw)?.stations;
++    let mut topology_solar_systems =
++        serde_json::from_str::<SolarSystemsFile>(&solar_systems_raw)?.solar_systems;
++    let mut item_types = serde_json::from_str::<ItemTypesFile>(&item_types_raw)?.item_types;
++
++    topology_stations.sort_by_key(|station| station.station_id);
++    topology_solar_systems.sort_by_key(|system| system.solar_system_id);
++    let selection = resolve_seed_selection(
++        args.preset.as_deref(),
++        &args.solar_system_ids,
++        &args.solar_system_names,
++        &topology_solar_systems,
++    )?;
++
++    let mut stations = topology_stations.clone();
++    if !selection.solar_system_ids.is_empty() {
++        let allowed_ids = selection
++            .solar_system_ids
+             .iter()
+             .copied()
+             .collect::<BTreeSet<_>>();
+@@ -585,16 +606,17 @@ fn load_seed_input(config: &MarketSeedConfig, args: &BuildArgs) -> Result<SeedIn
+         );
+     }
+ 
+-    let allowed_systems = stations
+-        .iter()
+-        .map(|station| station.solar_system_id)
+-        .collect::<BTreeSet<_>>();
+-    let mut filtered_systems = solar_systems
+-        .into_iter()
+-        .filter(|system| allowed_systems.contains(&system.solar_system_id))
+-        .collect::<Vec<_>>();
+-    filtered_systems.sort_by_key(|system| system.solar_system_id);
+-    if filtered_systems.is_empty() {
++    let allowed_systems = stations
++        .iter()
++        .map(|station| station.solar_system_id)
++        .collect::<BTreeSet<_>>();
++    let mut filtered_systems = topology_solar_systems
++        .iter()
++        .filter(|system| allowed_systems.contains(&system.solar_system_id))
++        .cloned()
++        .collect::<Vec<_>>();
++    filtered_systems.sort_by_key(|system| system.solar_system_id);
++    if filtered_systems.is_empty() {
+         bail!("the selected stations did not leave any solar systems to seed");
+     }
+ 
+@@ -613,16 +635,35 @@ fn load_seed_input(config: &MarketSeedConfig, args: &BuildArgs) -> Result<SeedIn
+             .entry(station.region_id)
+             .or_insert_with(|| station.region_name.clone());
+     }
+-    let regions = region_map
+-        .into_iter()
+-        .map(|(region_id, region_name)| RegionRow {
++    let regions = region_map
++        .into_iter()
++        .map(|(region_id, region_name)| RegionRow {
+             region_id,
+             region_name,
+-        })
+-        .collect::<Vec<_>>();
+-
+-    let selected_solar_system_ids = if selection.solar_system_ids.is_empty() {
+-        Vec::new()
++        })
++        .collect::<Vec<_>>();
++
++    let topology_system_ids = topology_stations
++        .iter()
++        .map(|station| station.solar_system_id)
++        .collect::<BTreeSet<_>>();
++    topology_solar_systems.retain(|system| topology_system_ids.contains(&system.solar_system_id));
++    let mut topology_region_map = BTreeMap::<u32, String>::new();
++    for station in &topology_stations {
++        topology_region_map
++            .entry(station.region_id)
++            .or_insert_with(|| station.region_name.clone());
++    }
++    let topology_regions = topology_region_map
++        .into_iter()
++        .map(|(region_id, region_name)| RegionRow {
++            region_id,
++            region_name,
++        })
++        .collect::<Vec<_>>();
++
++    let selected_solar_system_ids = if selection.solar_system_ids.is_empty() {
++        Vec::new()
+     } else {
+         filtered_systems
+             .iter()
+@@ -640,12 +681,15 @@ fn load_seed_input(config: &MarketSeedConfig, args: &BuildArgs) -> Result<SeedIn
+ 
+     Ok(SeedInputData {
+         selection_mode: selection.mode,
+-        selection_label: selection.label,
+-        selected_solar_system_ids,
+-        selected_solar_system_names,
+-        regions,
+-        solar_systems: filtered_systems,
+-        stations,
++        selection_label: selection.label,
++        selected_solar_system_ids,
++        selected_solar_system_names,
++        topology_regions,
++        topology_solar_systems,
++        topology_stations,
++        regions,
++        solar_systems: filtered_systems,
++        stations,
+         item_types,
+     })
+ }
+@@ -839,9 +883,9 @@ fn print_presets() -> Result<()> {
+     Ok(())
+ }
+ 
+-fn write_static_tables(
+-    connection: &mut Connection,
+-    input: &SeedInputData,
++fn write_static_tables(
++    connection: &mut Connection,
++    input: &SeedInputData,
+     progress: &ProgressBar,
+ ) -> Result<()> {
+     let transaction = connection.transaction()?;
+@@ -860,10 +904,10 @@ fn write_static_tables(
+     {
+         let mut statement =
+             transaction.prepare("INSERT INTO regions (region_id, region_name) VALUES (?1, ?2)")?;
+-        for region in &input.regions {
+-            statement.execute(params![region.region_id, region.region_name])?;
+-            progress.inc(1);
+-        }
++        for region in &input.regions {
++            statement.execute(params![region.region_id, region.region_name])?;
++            progress.inc(1);
++        }
+     }
+ 
+     {
+@@ -872,9 +916,9 @@ fn write_static_tables(
+          solar_system_id, region_id, constellation_id, solar_system_name, security
+        ) VALUES (?1, ?2, ?3, ?4, ?5)",
+         )?;
+-        for system in &input.solar_systems {
+-            statement.execute(params![
+-                system.solar_system_id,
++        for system in &input.solar_systems {
++            statement.execute(params![
++                system.solar_system_id,
+                 system.region_id,
+                 system.constellation_id,
+                 system.solar_system_name,
+@@ -890,9 +934,9 @@ fn write_static_tables(
+          station_id, solar_system_id, constellation_id, region_id, station_name, security
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+         )?;
+-        for station in &input.stations {
+-            statement.execute(params![
+-                station.station_id,
++        for station in &input.stations {
++            statement.execute(params![
++                station.station_id,
+                 station.solar_system_id,
+                 station.constellation_id,
+                 station.region_id,
+@@ -900,11 +944,11 @@ fn write_static_tables(
+                 station.security
+             ])?;
+             progress.inc(1);
+-        }
+-    }
+-
+-    {
+-        let mut statement = transaction.prepare(
++        }
++    }
++
++    {
++        let mut statement = transaction.prepare(
+       "INSERT INTO market_types (
+          type_id, group_id, category_id, market_group_id, name, group_name, base_price, volume, portion_size, published
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+@@ -929,11 +973,64 @@ fn write_static_tables(
+         }
+     }
+ 
+-    transaction.commit()?;
+-    Ok(())
+-}
+-
+-fn materialize_seed_stock(
++    transaction.commit()?;
++    Ok(())
++}
++
++fn append_static_topology(
++    connection: &mut Connection,
++    input: &SeedInputData,
++    progress: &ProgressBar,
++) -> Result<()> {
++    let transaction = connection.transaction()?;
++    {
++        let mut statement = transaction
++            .prepare("INSERT OR IGNORE INTO regions (region_id, region_name) VALUES (?1, ?2)")?;
++        for region in &input.topology_regions {
++            statement.execute(params![region.region_id, region.region_name])?;
++            progress.inc(1);
++        }
++    }
++    {
++        let mut statement = transaction.prepare(
++            "INSERT OR IGNORE INTO solar_systems (
++               solar_system_id, region_id, constellation_id, solar_system_name, security
++             ) VALUES (?1, ?2, ?3, ?4, ?5)",
++        )?;
++        for system in &input.topology_solar_systems {
++            statement.execute(params![
++                system.solar_system_id,
++                system.region_id,
++                system.constellation_id,
++                system.solar_system_name,
++                system.security
++            ])?;
++            progress.inc(1);
++        }
++    }
++    {
++        let mut statement = transaction.prepare(
++            "INSERT OR IGNORE INTO stations (
++               station_id, solar_system_id, constellation_id, region_id, station_name, security
++             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
++        )?;
++        for station in &input.topology_stations {
++            statement.execute(params![
++                station.station_id,
++                station.solar_system_id,
++                station.constellation_id,
++                station.region_id,
++                station.station_name,
++                station.security
++            ])?;
++            progress.inc(1);
++        }
++    }
++    transaction.commit()?;
++    Ok(())
++}
++
++fn materialize_seed_stock(
+     connection: &mut Connection,
+     config: &MarketSeedConfig,
+     region_plans: &[RegionSeedPlan],
+@@ -972,9 +1069,9 @@ fn materialize_seed_stock(
+                ?7,
+                ?7,
+                ?8
+-             FROM stations AS s
+-             CROSS JOIN market_types AS t
+-             WHERE s.region_id = ?9",
++             FROM stations AS s
++             CROSS JOIN market_types AS t
++             WHERE s.region_id = ?9",
+             params![
+                 config.seed.fallback_base_price,
+                 config.seed.fallback_type_modulus,
+@@ -1040,9 +1137,9 @@ fn materialize_seed_buy_orders(
+                ?7,
+                ?7,
+                ?8
+-             FROM stations AS s
+-             CROSS JOIN market_types AS t
+-             WHERE s.region_id = ?9",
++             FROM stations AS s
++             CROSS JOIN market_types AS t
++             WHERE s.region_id = ?9",
+             params![
+                 config.seed.fallback_base_price,
+                 config.seed.fallback_type_modulus,
+@@ -1462,13 +1559,133 @@ fn open_build_connection(
+     Ok(connection)
+ }
+ 
+-fn build_runtime_indexes(connection: &Connection, progress: &ProgressBar) -> Result<()> {
++fn build_runtime_indexes(connection: &Connection, progress: &ProgressBar) -> Result<()> {
+     for statement in runtime_index_statements() {
+         connection.execute_batch(statement)?;
+         progress.inc(1);
+     }
+-    Ok(())
+-}
++    Ok(())
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    fn station(
++        station_id: u64,
++        solar_system_id: u32,
++        constellation_id: u32,
++        region_id: u32,
++        name: &str,
++    ) -> StationRecord {
++        StationRecord {
++            station_id,
++            solar_system_id,
++            constellation_id,
++            region_id,
++            region_name: format!("Region {region_id}"),
++            station_name: name.to_string(),
++            security: 0.8,
++        }
++    }
++
++    fn solar_system(
++        solar_system_id: u32,
++        constellation_id: u32,
++        region_id: u32,
++    ) -> SolarSystemRecord {
++        SolarSystemRecord {
++            solar_system_id,
++            region_id,
++            constellation_id,
++            solar_system_name: format!("System {solar_system_id}"),
++            security: 0.8,
++        }
++    }
++
++    #[test]
++    fn scoped_seed_keeps_unselected_station_topology_without_stocking_it() {
++        let selected_station = station(60_000_001, 30_000_001, 20_000_001, 10_000_001, "Selected");
++        let regional_station = station(60_000_002, 30_000_002, 20_000_002, 10_000_002, "Regional");
++        let input = SeedInputData {
++            selection_mode: "preset".to_string(),
++            selection_label: "Selected only".to_string(),
++            selected_solar_system_ids: vec![selected_station.solar_system_id],
++            selected_solar_system_names: vec!["Selected".to_string()],
++            topology_regions: vec![
++                RegionRow {
++                    region_id: selected_station.region_id,
++                    region_name: selected_station.region_name.clone(),
++                },
++                RegionRow {
++                    region_id: regional_station.region_id,
++                    region_name: regional_station.region_name.clone(),
++                },
++            ],
++            topology_solar_systems: vec![
++                solar_system(30_000_001, 20_000_001, 10_000_001),
++                solar_system(30_000_002, 20_000_002, 10_000_002),
++            ],
++            topology_stations: vec![selected_station.clone(), regional_station.clone()],
++            regions: vec![RegionRow {
++                region_id: selected_station.region_id,
++                region_name: selected_station.region_name.clone(),
++            }],
++            solar_systems: vec![solar_system(30_000_001, 20_000_001, 10_000_001)],
++            stations: vec![selected_station.clone()],
++            item_types: vec![ItemTypeRecord {
++                type_id: 34,
++                group_id: Some(18),
++                category_id: Some(4),
++                group_name: Some("Mineral".to_string()),
++                name: "Tritanium".to_string(),
++                base_price: Some(4.0),
++                market_group_id: Some(1857),
++                volume: Some(0.01),
++                portion_size: Some(1),
++                published: true,
++            }],
++        };
++        let mut connection = Connection::open_in_memory().expect("open test database");
++        connection
++            .execute_batch(SCHEMA_SQL)
++            .expect("create market schema");
++        write_static_tables(&mut connection, &input, &ProgressBar::hidden())
++            .expect("write selected market scope");
++        materialize_seed_stock(
++            &mut connection,
++            &MarketSeedConfig::default(),
++            &build_region_seed_plans(&input),
++            input.item_types.len(),
++            &ProgressBar::hidden(),
++        )
++        .expect("materialize selected seed scope");
++        append_static_topology(&mut connection, &input, &ProgressBar::hidden())
++            .expect("append full station topology");
++
++        let station_count: u64 = connection
++            .query_row("SELECT COUNT(*) FROM stations", [], |row| row.get(0))
++            .expect("count stations");
++        let selected_seed_rows: u64 = connection
++            .query_row(
++                "SELECT COUNT(*) FROM seed_stock WHERE station_id = ?1",
++                params![selected_station.station_id],
++                |row| row.get(0),
++            )
++            .expect("count selected stock");
++        let regional_seed_rows: u64 = connection
++            .query_row(
++                "SELECT COUNT(*) FROM seed_stock WHERE station_id = ?1",
++                params![regional_station.station_id],
++                |row| row.get(0),
++            )
++            .expect("count unselected stock");
++
++        assert_eq!(station_count, 2);
++        assert_eq!(selected_seed_rows, 1);
++        assert_eq!(regional_seed_rows, 0);
++    }
++}
+ 
+ fn open_runtime_connection(path: &Path) -> Result<Connection> {
+     let connection = Connection::open(path)?;

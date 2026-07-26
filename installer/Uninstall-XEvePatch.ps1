@@ -9,7 +9,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $ReleaseName = 'X-Eve Living Universe'
-$ReleaseVersion = 'v0.1.0-pre4'
+$ReleaseVersion = 'v0.1.0-pre5'
 $BaselineVersion = 'v0.12.3'
 $ExpectedArchiveSha256 = '81E2B48DE1E55D8FAD413137F83FF26C7FEB4FFA943825093FFC1BB17468D27E'
 
@@ -430,7 +430,7 @@ function Remove-StagingDirectory {
 $installerRoot = Split-Path -Parent $PSCommandPath
 $releaseRoot = [System.IO.Path]::GetFullPath((Join-Path $installerRoot '..'))
 $patchDirectory = Join-Path $releaseRoot 'patches\v0.12.3'
-$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.1.0-pre4.patch'
+$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.1.0-pre5.patch'
 $baselineManifestPath = Join-Path $patchDirectory 'baseline-manifest.json'
 $installedManifestPath = Join-Path $patchDirectory 'installed-manifest.json'
 

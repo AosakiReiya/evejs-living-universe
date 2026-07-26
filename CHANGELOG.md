@@ -5,6 +5,30 @@ All notable public patch releases are recorded here.
 This project uses pre-release version labels while compatibility, persistence,
 and balance are still being tested.
 
+## 0.1.0-pre5 - 2026-07-26
+
+### Automatic regional economy startup
+
+- Kept the normal imported Jita + New Caldari market as the compact first-run
+  base while retaining the NPC-station topology needed by Living Economy.
+- Added a normal-start, non-destructive topology migration for existing pre4
+  databases. It inserts only absent region, system, and station authority and
+  does not rewrite stock, player orders, or market history.
+- Added race-safe create-only stock adjustments. The first economy cold start
+  creates only absent raw-mineral rows at the 37 regional hubs; existing rows,
+  including depleted zero-quantity rows, are never refilled.
+- Removed the need to run `bootstrapLivingEconomyMarket.js` for normal play.
+  The script remains available only for deliberate administrator/reset work.
+
+### Upgrade and verification
+
+- Added source-content build stamps so the ordinary launcher recompiles a
+  stale market daemon after patch upgrades instead of silently reusing it.
+- Added focused topology, preservation, partial-retry, backward-compatibility,
+  and real Node-to-Rust/SQLite verification.
+- Regenerated the single v0.12.3 patch, manifests, checksums, and installer
+  metadata for pre5.
+
 ## 0.1.0-pre4 - 2026-07-26
 
 ### Living Universe core boundary
