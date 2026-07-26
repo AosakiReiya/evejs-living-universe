@@ -11,7 +11,7 @@ if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
   $RepositoryRoot = Join-Path $PSScriptRoot '..'
 }
 
-$ExpectedBaselineArchiveSha256 = '7EC99325F6555F1C9C3C9CC3E45FD2225FE4F2805DA9DDBD827E850BBAA5F1F8'
+$ExpectedBaselineArchiveSha256 = '81E2B48DE1E55D8FAD413137F83FF26C7FEB4FFA943825093FFC1BB17468D27E'
 $Failures = [System.Collections.Generic.List[string]]::new()
 
 function Add-AuditFailure {
@@ -144,6 +144,85 @@ function Test-SensitivePath {
   }
 
   return $true
+}
+
+function Test-IsPublicIPv4 {
+  param([Parameter(Mandatory)][string]$Value)
+
+  $address = $null
+  if (
+    -not [System.Net.IPAddress]::TryParse($Value, [ref]$address) -or
+    $address.AddressFamily -ne [System.Net.Sockets.AddressFamily]::InterNetwork
+  ) {
+    return $false
+  }
+
+  $bytes = $address.GetAddressBytes()
+  if (
+    $bytes[0] -eq 0 -or
+    $bytes[0] -eq 10 -or
+    $bytes[0] -eq 127 -or
+    $bytes[0] -ge 224 -or
+    ($bytes[0] -eq 100 -and $bytes[1] -ge 64 -and $bytes[1] -le 127) -or
+    ($bytes[0] -eq 169 -and $bytes[1] -eq 254) -or
+    ($bytes[0] -eq 172 -and $bytes[1] -ge 16 -and $bytes[1] -le 31) -or
+    ($bytes[0] -eq 192 -and $bytes[1] -eq 168) -or
+    ($bytes[0] -eq 192 -and $bytes[1] -eq 0 -and $bytes[2] -eq 2) -or
+    ($bytes[0] -eq 198 -and $bytes[1] -in @(18, 19)) -or
+    ($bytes[0] -eq 198 -and $bytes[1] -eq 51 -and $bytes[2] -eq 100) -or
+    ($bytes[0] -eq 203 -and $bytes[1] -eq 0 -and $bytes[2] -eq 113)
+  ) {
+    return $false
+  }
+
+  return $true
+}
+
+function Test-IsPublicIPv6 {
+  param([Parameter(Mandatory)][string]$Value)
+
+  $address = $null
+  if (
+    -not [System.Net.IPAddress]::TryParse($Value, [ref]$address) -or
+    $address.AddressFamily -ne [System.Net.Sockets.AddressFamily]::InterNetworkV6
+  ) {
+    return $false
+  }
+
+  if (
+    [System.Net.IPAddress]::IsLoopback($address) -or
+    $address.IsIPv6LinkLocal -or
+    $address.IsIPv6Multicast -or
+    $address.IsIPv6SiteLocal -or
+    $address.IsIPv4MappedToIPv6
+  ) {
+    return $false
+  }
+
+  $bytes = $address.GetAddressBytes()
+  $isUnspecified = @($bytes | Where-Object { $_ -ne 0 }).Count -eq 0
+  $isUniqueLocal = ($bytes[0] -band 0xFE) -eq 0xFC
+  $isDocumentation = (
+    $bytes[0] -eq 0x20 -and
+    $bytes[1] -eq 0x01 -and
+    $bytes[2] -eq 0x0D -and
+    $bytes[3] -eq 0xB8
+  )
+  if ($isUnspecified -or $isUniqueLocal -or $isDocumentation) {
+    return $false
+  }
+
+  return $true
+}
+
+function Test-IsPlaceholderSecret {
+  param([Parameter(Mandatory)][string]$Value)
+
+  $normalized = $Value.Trim()
+  return (
+    [string]::IsNullOrWhiteSpace($normalized) -or
+    $normalized -match '(?i)^(?:example|placeholder|redacted|changeme|change-me|your[-_ ].*|test(?:[-_ ].*)?|\*+|x+)$'
+  )
 }
 
 function Get-ManifestEntries {
@@ -378,10 +457,21 @@ if ($patchFiles.Count -eq 1) {
     Add-AuditFailure 'Canonical patch is empty.'
   }
 
+  $patchBytes = [System.IO.File]::ReadAllBytes($canonicalPatch.FullName)
+  if ([System.Array]::IndexOf($patchBytes, [byte]0) -ge 0) {
+    Add-AuditFailure 'Canonical patch contains NUL bytes and is not a plain-text source patch.'
+  }
+
   $patchLines = @(Get-Content -LiteralPath $canonicalPatch.FullName)
   $currentDiffPath = $null
   $diffCount = 0
-  foreach ($line in $patchLines) {
+  for ($patchLineIndex = 0; $patchLineIndex -lt $patchLines.Count; $patchLineIndex += 1) {
+    $line = $patchLines[$patchLineIndex]
+    $patchLineNumber = $patchLineIndex + 1
+    if ($line -ceq 'GIT binary patch' -or $line -cmatch '^Binary files .+ differ$') {
+      Add-AuditFailure "Canonical patch contains a binary diff at patch line $patchLineNumber."
+    }
+
     if ($line.StartsWith('diff --git ')) {
       $diffCount += 1
       $currentDiffPath = $null
@@ -397,6 +487,12 @@ if ($patchFiles.Count -eq 1) {
       $leftPublic = Test-SensitivePath -Path $leftPath -Context 'Patch source path'
       $rightPublic = Test-SensitivePath -Path $rightPath -Context 'Patch destination path'
       if ($leftSafe -and $rightSafe -and $leftPublic -and $rightPublic) {
+        if ($rightPath -match '(?i)\.(?:diff|patch)$') {
+          Add-AuditFailure "Canonical patch must not embed another patch or diff artifact: $rightPath"
+        }
+        if ([System.IO.Path]::GetFileName($rightPath) -match '(?i)^(?:RUN_REPORT|TEST_REPORT|BENCHMARK_REPORT)\.md$') {
+          Add-AuditFailure "Canonical patch must not embed a generated development report: $rightPath"
+        }
         [void]$patchPaths.Add($rightPath)
         $currentDiffPath = $rightPath
         $patchKinds[$rightPath] = 'modified'
@@ -432,6 +528,94 @@ if ($patchFiles.Count -eq 1) {
       $movePath = $Matches[1]
       [void](Test-SafeRelativePath -Path $movePath -Context 'Patch rename/copy path')
       [void](Test-SensitivePath -Path $movePath -Context 'Patch rename/copy path')
+      continue
+    }
+
+    if (
+      $line -match '^(?:index |new file mode |deleted file mode |old mode |new mode |similarity index |dissimilarity index |@@ |\\ No newline)'
+    ) {
+      continue
+    }
+
+    # Inspect every source payload line, including removed and context text. A
+    # removed secret or machine path is still present in the published patch.
+    $payload = $line
+    if ($payload.Length -gt 0 -and $payload[0] -in @('+', '-', ' ')) {
+      $payload = $payload.Substring(1)
+    }
+
+    $hasAbsoluteLocalPath = (
+      $payload -match '(?i)(?<![A-Za-z0-9+.-])(?:file:///)?[A-Z]:[\\/]' -or
+      $payload -match '\\\\[A-Za-z0-9._-]+[\\/]'
+    )
+    if (-not $hasAbsoluteLocalPath) {
+      $posixPathCandidates = [System.Text.RegularExpressions.Regex]::Matches(
+        $payload,
+        '(?i)/(?:Users|home|root|tmp|opt|srv|var/(?:tmp|log|lib|run))/'
+      )
+      foreach ($candidate in $posixPathCandidates) {
+        $prefix = $payload.Substring(0, $candidate.Index)
+        $lastSpace = [Math]::Max($prefix.LastIndexOf(' '), $prefix.LastIndexOf("`t"))
+        $tokenPrefix = $prefix.Substring($lastSpace + 1)
+        if (-not $tokenPrefix.Contains('://')) {
+          $hasAbsoluteLocalPath = $true
+          break
+        }
+      }
+    }
+    if ($hasAbsoluteLocalPath) {
+      Add-AuditFailure "Canonical patch payload contains an absolute local path at patch line $patchLineNumber."
+    }
+
+    if ($payload -match '(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,63}\b') {
+      Add-AuditFailure "Canonical patch payload contains an email address at patch line $patchLineNumber."
+    }
+
+    $ipv4Candidates = [System.Text.RegularExpressions.Regex]::Matches(
+      $payload,
+      '(?<![0-9])(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?![0-9])'
+    )
+    foreach ($candidate in $ipv4Candidates) {
+      if (Test-IsPublicIPv4 -Value $candidate.Value) {
+        Add-AuditFailure "Canonical patch payload contains a public IPv4 address at patch line $patchLineNumber."
+        break
+      }
+    }
+
+    $ipv6Candidates = [System.Text.RegularExpressions.Regex]::Matches(
+      $payload,
+      '(?<![0-9A-Fa-f:])(?=[23][0-9A-Fa-f]{3}:[0-9A-Fa-f:]*[0-9A-Fa-f])[23][0-9A-Fa-f]{3}(?::[0-9A-Fa-f]{0,4}){2,7}(?![0-9A-Fa-f:])'
+    )
+    foreach ($candidate in $ipv6Candidates) {
+      if (Test-IsPublicIPv6 -Value $candidate.Value) {
+        Add-AuditFailure "Canonical patch payload contains a public IPv6 address at patch line $patchLineNumber."
+        break
+      }
+    }
+
+    if (
+      $payload -match '-----BEGIN (?:RSA |DSA |EC |OPENSSH )?PRIVATE KEY-----' -or
+      $payload -match '\bgh[pousr]_[A-Za-z0-9]{20,}\b' -or
+      $payload -match '\bgithub_pat_[A-Za-z0-9_]{20,}\b' -or
+      $payload -match '\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{20,}\b' -or
+      $payload -match '\bAKIA[0-9A-Z]{16}\b' -or
+      $payload -match '\bAIza[0-9A-Za-z_-]{30,}\b' -or
+      $payload -match '\bxox[baprs]-[A-Za-z0-9-]{10,}\b' -or
+      $payload -match '\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b' -or
+      $payload -match '(?i)\b(?:authorization|proxy-authorization)\s*[:=]\s*[''"]?(?:basic|bearer)\s+[A-Za-z0-9._~+/-]{12,}'
+    ) {
+      Add-AuditFailure "Canonical patch payload contains private-key or token-shaped material at patch line $patchLineNumber."
+    }
+
+    $literalSecretMatch = [System.Text.RegularExpressions.Regex]::Match(
+      $payload,
+      '(?i)\b(?:api[_-]?key|access[_-]?token|auth[_-]?token|refresh[_-]?token|client[_-]?secret|password|passwd)\b\s*[:=]\s*([''"])(?<value>[^''"\r\n]{4,})\1'
+    )
+    if (
+      $literalSecretMatch.Success -and
+      -not (Test-IsPlaceholderSecret -Value $literalSecretMatch.Groups['value'].Value)
+    ) {
+      Add-AuditFailure "Canonical patch payload contains a literal credential assignment at patch line $patchLineNumber."
     }
   }
 
@@ -589,14 +773,14 @@ if ($manifestByName.ContainsKey('baseline-manifest.json')) {
         Add-AuditFailure "baseline-manifest.json compatibility is missing $requiredCompatibilityProperty."
       }
     }
-    if ($compatibilityProperties -contains 'version' -and [string]$baselineData.compatibility.version -cne 'v0.12.2') {
-      Add-AuditFailure 'baseline-manifest.json compatibility.version is not v0.12.2.'
+    if ($compatibilityProperties -contains 'version' -and [string]$baselineData.compatibility.version -cne 'v0.12.3') {
+      Add-AuditFailure 'baseline-manifest.json compatibility.version is not v0.12.3.'
     }
     if (
       $compatibilityProperties -contains 'archiveSha256' -and
       [string]$baselineData.compatibility.archiveSha256.ToUpperInvariant() -cne $ExpectedBaselineArchiveSha256
     ) {
-      Add-AuditFailure 'baseline-manifest.json compatibility.archiveSha256 does not identify the approved EveJS v0.12.2 source archive.'
+      Add-AuditFailure 'baseline-manifest.json compatibility.archiveSha256 does not identify the approved EveJS v0.12.3 source archive.'
     }
   }
 }
@@ -729,5 +913,5 @@ if ($Failures.Count -gt 0) {
 
 Write-Host 'Patch repository audit passed.' -ForegroundColor Green
 Write-Host ' - No full EveJS source or runtime trees are present or tracked.'
-Write-Host ' - Exactly one canonical patch is present and its paths are safe.'
+Write-Host ' - Exactly one canonical text patch is present; its paths and payload pass the public-release privacy scan.'
 Write-Host ' - Release manifests and SHA256SUMS are valid and complete.'

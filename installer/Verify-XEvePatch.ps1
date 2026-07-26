@@ -9,7 +9,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$ExpectedArchiveSha256 = '7EC99325F6555F1C9C3C9CC3E45FD2225FE4F2805DA9DDBD827E850BBAA5F1F8'
+$ExpectedArchiveSha256 = '81E2B48DE1E55D8FAD413137F83FF26C7FEB4FFA943825093FFC1BB17468D27E'
 
 function Get-CanonicalTarget {
     param([string]$Path)
@@ -125,22 +125,29 @@ function Invoke-PatchCheck {
 
 function Invoke-VerificationTests {
     param([string]$Root)
-    $npm = Get-Command npm.cmd -ErrorAction SilentlyContinue
-    if ($null -eq $npm) { throw 'npm.cmd is required for -RunTests.' }
+    $node = Get-Command node.exe -ErrorAction SilentlyContinue
+    if ($null -eq $node) { throw 'node.exe is required for -RunTests.' }
     $serverRoot = Join-Path $Root 'server'
+    if (-not (Test-Path -LiteralPath (Join-Path $serverRoot 'node_modules\picocolors\package.json') -PathType Leaf)) {
+        throw '-RunTests requires the normal EveJS server dependencies. Start the regular Play.bat once, let setup finish, stop the server, and retry.'
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $Root '_local\gameStore\manifest.json') -PathType Leaf)) {
+        throw '-RunTests requires the normal EveJS local database. Start the regular Play.bat once, let setup finish, stop the server, and retry.'
+    }
     $tests = @(
-        'verify:living-universe',
-        'verify:living-universe-transit',
-        'verify:family-estate',
-        'verify:family-estate-claim',
-        'verify:family-estate-projects',
-        'verify:x-eve'
+        'verifyLivingUniversePopulation.js',
+        'verifyLivingUniverseTransitTiming.js',
+        'verifyFamilyEstate.js',
+        'verifyFamilyEstateClaim.js',
+        'verifyFamilyEstateProjects.js',
+        'verifyXEveCore.js',
+        'verifyXEveEventCircuit.js'
     )
     Push-Location $serverRoot
     try {
         foreach ($test in $tests) {
             Write-Host "[X-Eve] Running $test"
-            & $npm.Source run $test
+            & $node.Source (Join-Path $serverRoot "scripts\$test")
             if ($LASTEXITCODE -ne 0) { throw "Verification command failed: $test" }
         }
         $marketReady = $false
@@ -152,11 +159,11 @@ function Invoke-VerificationTests {
             $client.Dispose()
         } catch { $marketReady = $false }
         if ($marketReady) {
-            Write-Host '[X-Eve] Running verify:living-economy'
-            & $npm.Source run 'verify:living-economy'
-            if ($LASTEXITCODE -ne 0) { throw 'Verification command failed: verify:living-economy' }
+            Write-Host '[X-Eve] Running verifyLivingEconomy.js'
+            & $node.Source (Join-Path $serverRoot 'scripts\verifyLivingEconomy.js')
+            if ($LASTEXITCODE -ne 0) { throw 'Verification command failed: verifyLivingEconomy.js' }
         } else {
-            Write-Warning 'Market RPC 127.0.0.1:40111 is not running; skipped verify:living-economy.'
+            Write-Warning 'Market RPC 127.0.0.1:40111 is not running; skipped verifyLivingEconomy.js.'
         }
     } finally { Pop-Location }
 }
@@ -167,13 +174,13 @@ if ($null -eq (Get-Command git -ErrorAction SilentlyContinue)) {
 
 $target = Get-CanonicalTarget $EveJSPath
 $releaseRoot = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $PSCommandPath) '..'))
-$patchDirectory = Join-Path $releaseRoot 'patches\v0.12.2'
-$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.1.0-pre1.patch'
+$patchDirectory = Join-Path $releaseRoot 'patches\v0.12.3'
+$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.1.0-pre4.patch'
 $baselineManifest = Read-Json (Join-Path $patchDirectory 'baseline-manifest.json') 'Baseline manifest'
 $installedManifest = Read-Json (Join-Path $patchDirectory 'installed-manifest.json') 'Installed manifest'
 
 if ([string]$baselineManifest.compatibility.archiveSha256 -ne $ExpectedArchiveSha256) {
-    throw 'Baseline manifest has the wrong v0.12.2 archive checksum.'
+    throw 'Baseline manifest has the wrong v0.12.3 archive checksum.'
 }
 if ((Get-Sha256 $patchPath) -ne ([string]$installedManifest.patchSha256).ToUpperInvariant()) {
     throw 'Patch checksum does not match installed-manifest.json.'
@@ -196,5 +203,5 @@ if (Test-Path -LiteralPath $statePath -PathType Leaf) {
     if ($RunTests) { throw '-RunTests requires an installed patch and install state.' }
     Test-Files $target $baselineMap
     Invoke-PatchCheck $target $patchPath
-    Write-Host '[X-Eve] Clean v0.12.2 baseline integrity and apply checks passed.'
+    Write-Host '[X-Eve] Clean v0.12.3 baseline integrity and apply checks passed.'
 }
