@@ -1,6 +1,6 @@
 # X-Eve Living Universe
 
-X-Eve Living Universe is an independent source patch for a compatible v0.12.2
+X-Eve Living Universe is an independent source patch for a compatible v0.12.3
 server baseline. It adds a persistent virtual NPC population, regional
 economic activity, materialized traffic around players, conflict, industry,
 logistics, and supporting performance controls.
@@ -14,34 +14,40 @@ logistics, and supporting performance controls.
 The patch is pre-release software. Back up any installation and world data
 before trying it.
 
+X Command is intentionally not included in this repository. The Living
+Universe core keeps the industrial-crew services and adapter-neutral command
+seams that a separate X Command package can use later, without coupling this
+patch to its web interface, API, authentication, or account-linking layer.
+
 ## Compatibility
 
-The current patch targets one exact **v0.12.2 compatible server baseline**. The
+The current patch targets one exact **v0.12.3 compatible server baseline**. The
 independently obtained archive used to build and verify this release has this
 SHA-256:
 
 ```text
-7EC99325F6555F1C9C3C9CC3E45FD2225FE4F2805DA9DDBD827E850BBAA5F1F8
+81E2B48DE1E55D8FAD413137F83FF26C7FEB4FFA943825093FFC1BB17468D27E
 ```
 
 Check an archive in PowerShell with:
 
 ```powershell
-Get-FileHash -Algorithm SHA256 'C:\path\to\server-v0.12.2.zip'
+Get-FileHash -Algorithm SHA256 'C:\path\to\EveJS-v0.12.3.zip'
 ```
 
 Do not apply the patch to another server version, an already modified tree, or
-your only working copy. The installer validates the expected v0.12.2 baseline
+your only working copy. The installer validates the expected v0.12.3 baseline
 before changing anything and stops on a mismatch.
 
 ## Install
 
-You need Git for Windows and PowerShell. Stop the server and its supporting services,
-extract a clean v0.12.2 base, then run:
+You need Git for Windows, PowerShell, Node.js, Rust, and the Visual Studio C++
+Build Tools used by EveJS's standalone market service. Stop the server and its
+supporting services, extract a clean v0.12.3 base, then run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\installer\Install-XEvePatch.ps1 `
-  -EveJSPath 'C:\path\to\server-v0.12.2'
+  -EveJSPath 'C:\path\to\EveJS-v0.12.3'
 ```
 
 The installer applies the single versioned patch, verifies the result, and
@@ -49,25 +55,43 @@ rolls back automatically if an installation step fails. The batch-file wrapper
 is equivalent:
 
 ```bat
-installer\Install.bat "C:\path\to\server-v0.12.2"
+installer\Install.bat "C:\path\to\EveJS-v0.12.3"
 ```
 
 Verify the installation separately with:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\installer\Verify-XEvePatch.ps1 `
-  -EveJSPath 'C:\path\to\server-v0.12.2'
+  -EveJSPath 'C:\path\to\EveJS-v0.12.3'
 ```
 
 See [Installation](docs/INSTALL.md) for backup, verification, test, and
 uninstall details.
 
-## Enable deliberately
+## Start normally
 
-The major simulation systems are **disabled by default**. Installing the patch
-does not silently populate a universe or reset an economy. Start with a small
-test configuration and opt in through the target server's private configuration
-file or corresponding environment variables.
+The patch installs its public Living Universe profile as part of EveJS. After
+the usual EveJS client setup, double-click the ordinary root `Play.bat`.
+If the server is not running, `Play.bat` starts the normal `StartServer.bat`
+path automatically. That path starts the market dependency, the EveJS server,
+and then waits for the 5,000-pilot universe, X-Eve, market stock cache, and
+proxy before launching the client.
+
+There is no X-Eve-specific player launcher and no private test profile. On the
+first run only, the regular server path creates the Jita + New Caldari market
+seed and compiles the market service if those artifacts do not exist. This can
+take several minutes. If the Rust/C++ toolchain is missing, run EveJS's bundled
+`tools\InstallRustForMarket.bat` once, then use `Play.bat` normally.
+
+The installed profile creates 5,000 persistent pilots. Local chat shows the
+pilots currently present in the player's system; pilots travelling between
+systems or intentionally delayed by session transitions are correctly absent
+until they arrive.
+
+Keep `evejs.config.x-eve.json` unchanged because it is part of the verified
+patch. Put personal X-Eve capacity or feature overrides in the optional private
+`evejs.config.x-eve.local.json`; ordinary EveJS settings can continue to use
+`evejs.config.local.json`.
 
 The normal performance reference is a **100 ms** tick interval. Treat **120 ms
 p95** as a warning and **130 ms p95** as a load-test ceiling, not a normal
@@ -76,7 +100,7 @@ only**: it accelerates unobserved virtual travel while observed and materialized
 ships continue using normal movement timing.
 
 See [Configuration](docs/CONFIGURATION.md) and
-[Performance](docs/PERFORMANCE.md) before increasing population or physical NPC
+[Performance](docs/PERFORMANCE.md) before changing population or physical NPC
 budgets.
 
 ## What the patch adds
@@ -91,14 +115,14 @@ budgets.
   resulting replacement demand.
 - Bounded schedulers, physical-ship caps, durable state, economy telemetry, and
   performance admission controls.
-- Optional estate, wormhole, live-event, and X-Eve experimental systems behind
-  explicit feature gates.
+- Separately gated estate, wormhole, live-event, and X-Eve experimental
+  systems; the installed play profile enables the verified pre4 set.
 
 Read [Architecture](docs/ARCHITECTURE.md) for the simulation model.
 
 ## Repository contents
 
-- `patches/v0.12.2/x-eve-living-universe-v0.1.0-pre1.patch` - the single
+- `patches/v0.12.3/x-eve-living-universe-v0.1.0-pre4.patch` - the single
   versioned source patch.
 - `installer/` - baseline validation, installation, verification, rollback, and
   uninstall helpers.

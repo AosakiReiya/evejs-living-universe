@@ -71,10 +71,31 @@ haulers, but the player is not required to keep the underlying economy alive.
 ### Conflict and replacement demand
 
 Pirate, civilian, corporate, and security flights can enter campaign encounters.
+The roaming kernel also forms a bounded set of persistent operation groups from
+existing flights. Each group advances through staging, transit, patrol, camp,
+and dispersal phases on a deadline queue. Directional gate-lane and system
+indexes find overlapping hostile presence without scanning every group against
+every other group.
+
+A contact is an opportunity, not an automatic teleport into combat. Its system,
+gate, time window, participating flights, and source operation are retained
+explicitly. A contact whose overlap window has already expired is discarded
+rather than scheduled as a late battle. Capacity-limited live contacts remain
+bounded and retryable instead of causing an unbounded catch-up pass.
+
 When observed, combat is represented with physical ships and native effects.
-When sufficiently distant, a bounded deterministic resolution can produce the
-same durable categories of outcome. Ship loss consumes assets and creates
-replacement demand for industry and hauling.
+An already-visible gate camp is adopted into the encounter in place, preserving
+its position and identity while only a missing opposing wing is materialized.
+When sufficiently distant, bounded deterministic resolution can produce the
+same durable categories of outcome. Loss handling is shared by campaign,
+civilian-interdiction, and roaming paths so destroyed ships consume assets and
+create replacement demand for industry and hauling.
+
+Eligible unclaimed NPC wrecks can also become bounded salvage-recovery work.
+Recovery crews use the existing salvager reward rules, spend modeled outbound,
+recovery, and return time, and credit recovered materials only after delivery.
+The salvage state is persisted with the rest of the Living Economy; it is not
+an instant or free stock injection.
 
 Security and distress behavior can surface activity to players without making
 every encounter wait indefinitely for a witness.
@@ -117,12 +138,18 @@ activity. Small bounded schedulers bridge the two; global and per-system caps
 prevent a busy Local list from automatically becoming an equally large physical
 scene.
 
+Roaming operations add a second boundary beneath those physical caps: at most
+96 operation groups, 16 due phase transitions, 192 indexed presence checks, six
+camping groups, and 1.5 ms of synchronous roaming work per pass at the default
+configuration. These limits bound decision work; they do not reserve or bypass
+physical-ship capacity.
+
 The practical target remains near the 100 ms tick baseline. See
 [Performance](PERFORMANCE.md) for thresholds and capacity-test procedure.
 
 ## Distribution boundary
 
 This architecture is delivered as changes against a separately obtained
-compatible v0.12.2 base. The repository contains no complete patched server tree, EVE
-client, CCP assets, runtime databases, certificates, portrait cache, or private
-deployment data.
+compatible v0.12.3 base. The repository contains no complete patched server
+tree, EVE client, CCP assets, runtime databases, certificates, portrait cache,
+or private deployment data.

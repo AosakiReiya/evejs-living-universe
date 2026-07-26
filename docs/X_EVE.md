@@ -2,7 +2,11 @@
 
 ## Status
 
-X-Eve is a separate economic and command layer built on top of the Living Universe. It is disabled by default while its accounting, persistence, recovery, and performance boundaries are verified. Enabling Living Universe does not implicitly enable X-Eve.
+X-Eve is the economic scheduler and event kernel built on top of the Living
+Universe. It is not the separate X Command web interface. Its source gate
+defaults to disabled, while the pre4 installed play profile enables both core
+systems through the ordinary EveJS server. Their gates can be overridden in
+`evejs.config.x-eve.local.json` or with `EVEJS_*` environment variables.
 
 The bounded foundation described here does not replace the existing market, Living Economy, corporation wallet, contract, industry, or inventory services. It establishes the durable transaction and scheduling rules those services can integrate with in later slices.
 
@@ -207,7 +211,10 @@ Before any native market or wallet mutation is enabled, procurement fills must g
 
 ### Stage 0: Foundation
 
-Implement and verify the dedicated state store, zero-sum ledger, deterministic idempotency, inbox, outbox, deadline queue, load governor, telemetry, and restart recovery. Keep the feature disabled by default and prove that it has no effect when disabled.
+Implement and verify the dedicated state store, zero-sum ledger, deterministic
+idempotency, inbox, outbox, deadline queue, load governor, telemetry, and
+restart recovery. Keep the source gate safe when disabled and prove that it has
+no effect in that state; release profiles may opt into the verified foundation.
 
 ### Stage 1: Read-only observation
 
