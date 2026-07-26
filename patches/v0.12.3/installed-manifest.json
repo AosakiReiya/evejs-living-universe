@@ -1,7 +1,7 @@
 {
     "schemaVersion":  1,
-    "release":  "v0.1.0-pre5",
-    "patchFile":  "x-eve-living-universe-v0.1.0-pre5.patch",
+    "release":  "v0.1.0",
+    "patchFile":  "x-eve-living-universe-v0.1.0.patch",
     "patchSha256":  "B7F3301DDFED313ED7767656336B08638215065C5AB9B6E42C5C5FEDBC083BC8",
     "fileCount":  179,
     "modifiedFileCount":  56,

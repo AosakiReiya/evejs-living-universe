@@ -109,7 +109,7 @@ The estate treasury is the owning corporation's real master wallet, not a second
 
 Travel acceleration is deliberately limited to unobserved virtual space. Set `livingUniverseOffGridTravelTimeMultiplier` above `1` to shorten flight legs only while the ship is neither materialized nor in a system containing a player. If a player enters during an accelerated leg, the remaining journey is rebased to normal time without teleporting the ship. The local X-Eve test profile uses `10`, while player-observed flight, station clearance, alignment, warp, wormhole traversal, and final approach remain at normal speed.
 
-The local profile also uses `livingEconomyIndustryTimeScale: 0.1` so NPC industry completes ten times faster during this isolated pre-release test. This changes production duration, not project repair duration: stabilization still takes two hours and reprocessing still takes four hours after their supplies arrive. Keep both multipliers at production values when measuring final balance or pacing.
+The local profile also uses `livingEconomyIndustryTimeScale: 0.1` so NPC industry completes ten times faster during this isolated accelerated test. This changes production duration, not project repair duration: stabilization still takes two hours and reprocessing still takes four hours after their supplies arrive. Keep both multipliers at production values when measuring final balance or pacing.
 
 ## Veteran prologue
 
