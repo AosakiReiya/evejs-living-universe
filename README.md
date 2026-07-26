@@ -11,8 +11,8 @@ logistics, and supporting performance controls.
 > configuration. Obtain a compatible base independently and apply the patch to
 > your own clean copy.
 
-The patch is pre-release software. Back up any installation and world data
-before trying it.
+`v0.1.0` is the first public release for the exact EveJS v0.12.3 compatible
+baseline. Back up any installation and world data before applying the patch.
 
 X Command is intentionally not included in this repository. The Living
 Universe core keeps the industrial-crew services and adapter-neutral command
@@ -124,13 +124,13 @@ budgets.
 - Bounded schedulers, physical-ship caps, durable state, economy telemetry, and
   performance admission controls.
 - Separately gated estate, wormhole, live-event, and X-Eve experimental
-  systems; the installed play profile enables the verified pre5 set.
+  systems; the installed play profile enables the verified public set.
 
 Read [Architecture](docs/ARCHITECTURE.md) for the simulation model.
 
 ## Repository contents
 
-- `patches/v0.12.3/x-eve-living-universe-v0.1.0-pre5.patch` - the single
+- `patches/v0.12.3/x-eve-living-universe-v0.1.0.patch` - the single
   versioned source patch.
 - `installer/` - baseline validation, installation, verification, rollback, and
   uninstall helpers.

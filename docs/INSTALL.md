@@ -141,23 +141,6 @@ edit it directly. Put personal feature or capacity overrides in an optional
 ordinary mutable `evejs.config.local.json` are not owned by the patch, so
 normal configuration changes do not invalidate patch verification.
 
-## Upgrade from an earlier patch release
-
-Each release records the exact canonical-patch hash it installed. Before
-installing a newer release, stop the server and run the uninstaller from the
-same repository release that performed the current installation. Back up any
-intentional source changes first.
-
-In particular, remove pre4 with the pre4 uninstaller before installing pre5.
-The generated market database can remain in place; pre5 upgrades its station
-topology non-destructively on the next ordinary start.
-
-Do not use a newer release's uninstaller to remove an older release and do not
-overwrite the local install record. After the old release has been cleanly
-removed, apply the newer release to the restored compatible baseline. If the
-old uninstaller reports changed files, preserve those changes and resolve them
-deliberately instead of forcing an overwrite.
-
 ## Uninstall
 
 Stop the server and run:

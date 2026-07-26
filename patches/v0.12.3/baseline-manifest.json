@@ -1,6 +1,6 @@
 {
     "schemaVersion":  1,
-    "release":  "v0.1.0-pre5",
+    "release":  "v0.1.0",
     "compatibility":  {
                           "product":  "EveJS",
                           "version":  "v0.12.3",
