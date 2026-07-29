@@ -2,6 +2,61 @@
 
 All notable public patch releases are recorded here.
 
+## 0.2.0 - 2026-07-28
+
+First Living Universe release for the exact EveJS v0.12.3.1 compatible
+baseline.
+
+### Compatibility and packaging
+
+- Targets the independently obtained `EveJS-v0.12.3.1.zip` archive identified
+  by SHA-256
+  `1DEB61A51F808D9F2B330214DA64EC297D9EE5F96EE4B8265692A65F35EEFC1E`.
+- Ships one source patch covering 197 paths: 64 modified files and 133 added
+  files. The validating installer, verifier, rollback, and uninstall workflow
+  remains scoped to those paths.
+- Replaces the old release in the repository's current tree without rewriting
+  its history. Version 0.1.0 remains the historical EveJS v0.12.3 release and
+  must not be installed on v0.12.3.1.
+- Keeps the X Command web interface, API, authentication, account linking,
+  browser assets, and UI adapters outside the Living Universe package so X
+  Command can remain a separate overlay.
+
+### Economy, procurement, and mobilization
+
+- Adds staged replacement production, parallel hull lines, and persistent
+  industrial work needed to turn ship losses into replacement supply.
+- Adds war-premium procurement orders that players can fill, including durable
+  fulfillment and delivery accounting.
+- Adds closed-loop mobilization so conflict pressure drives doctrine demand,
+  procurement, production, deployment, and replacement.
+- Adds pirate-faction replacement supply, faction shipyard behavior, and a
+  bounded smuggler fallback when ordinary supply cannot satisfy hostile-space
+  demand.
+- Adds the NPC refinery path used by the simulated economy while preserving a
+  meaningful player procurement opportunity.
+- Preserves loud diagnostics and recoverable state when a scheduler pulse or
+  persistent economy-state load fails.
+
+### Faction conflict and industrial crews
+
+- Adds faction hostility evaluation, hostile engagement behavior, kill-credit
+  accounting, and standing consequences.
+- Projects hired crews into their employer corporation, Local, corporation
+  chat, and friendly relationship state while keeping their retained
+  affiliation data.
+- Adds pooled industrial-crew defense, drone and escort participation,
+  threat-response thresholds, and durable travel and presence lifecycle
+  behavior.
+
+### Verification
+
+- Adds focused verification for procurement and mobilization, faction
+  hostility, managed-crew defense, corporation employee projection, Local
+  presence, and synthetic chat presence.
+- Validates clean application to the exact v0.12.3.1 baseline, installed file
+  hashes, reverse application, uninstall, and exact baseline restoration.
+
 ## 0.1.0 - 2026-07-26
 
 First public release for the exact EveJS v0.12.3 compatible baseline.

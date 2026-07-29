@@ -65,8 +65,18 @@ The economy connects stock, demand, procurement, mining, freight, and industry:
 7. Loss or cancellation follows an explicit recovery or refund path rather than
    silently duplicating cargo or money.
 
-The player can sell into NPC corporation demand and observe or compete with
-haulers, but the player is not required to keep the underlying economy alive.
+Replacement demand is staged line by line while a ship returns only after its
+complete package is assembled. Pirate hulls use faction shipyards plus a
+bounded smuggler fallback instead of consuming the empire mineral basket.
+When replacement pressure rises, a closed-loop mobilization controller
+increases freight, industry, refinery, and pirate-supply capacity without
+changing conflict pacing or flooding routine peacetime production.
+
+NPC corporations can raise shortage-specific war-premium buy orders. A player
+sale into one of those orders enters authoritative Living Economy stock and
+reduces the shortage through the same idempotent settlement path; it is not a
+decorative market payment. The player can therefore supply or compete with the
+economy, but is not required to keep it alive.
 
 ### Conflict and replacement demand
 
@@ -99,6 +109,12 @@ an instant or free stock injection.
 
 Security and distress behavior can surface activity to players without making
 every encounter wait indefinitely for a witness.
+
+Living factions admit player targets per character. Recent aggression creates
+a temporary wall-clock hostility window, while sufficiently poor standing
+creates persistent shoot-on-sight behavior. Short-lived kill-credit records
+connect physical player final blows to loss and standing processing without
+treating simulated NPC pilots as player attackers.
 
 ### Optional estate and live-event systems
 
@@ -150,6 +166,6 @@ The practical target remains near the 100 ms tick baseline. See
 ## Distribution boundary
 
 This architecture is delivered as changes against a separately obtained
-compatible v0.12.3 base. The repository contains no complete patched server
+compatible v0.12.3.1 base. The repository contains no complete patched server
 tree, EVE client, CCP assets, runtime databases, certificates, portrait cache,
 or private deployment data.

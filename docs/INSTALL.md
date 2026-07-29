@@ -7,7 +7,7 @@ server. Obtain the compatible base independently.
 
 - Windows with PowerShell 5.1 or newer.
 - Git for Windows available on `PATH`.
-- A clean, separately obtained compatible v0.12.3 server tree.
+- A clean, separately obtained compatible v0.12.3.1 server tree.
 - Node.js, Rust, and the Visual Studio C++ Build Tools required by EveJS's
   standalone market service.
 - A backup of any configuration, databases, certificates, and world state you
@@ -18,16 +18,16 @@ public server, firewall, DNS, certificates, or client connection profile.
 
 ## 1. Verify the base archive
 
-The v0.12.3 archive used for this patch has this SHA-256:
+The v0.12.3.1 archive used for this patch has this SHA-256:
 
 ```text
-81E2B48DE1E55D8FAD413137F83FF26C7FEB4FFA943825093FFC1BB17468D27E
+1DEB61A51F808D9F2B330214DA64EC297D9EE5F96EE4B8265692A65F35EEFC1E
 ```
 
 Verify your independently obtained archive:
 
 ```powershell
-Get-FileHash -Algorithm SHA256 'C:\Downloads\EveJS-v0.12.3.zip'
+Get-FileHash -Algorithm SHA256 'C:\Downloads\EveJS-v0.12.3.1.zip'
 ```
 
 The hash must match exactly. A filename alone is not proof of compatibility.
@@ -43,7 +43,7 @@ Extract the archive to a new directory. Do not point the installer at:
 - your only copy of important databases or configuration.
 
 Stop the game server, market service, and related tools before installing. The
-installer checks the expected v0.12.3 file hashes and the absence of patch-added
+installer checks the expected v0.12.3.1 file hashes and the absence of patch-added
 paths before it writes anything.
 
 ## 3. Apply the single patch
@@ -52,13 +52,13 @@ From the root of this patch repository, run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\installer\Install-XEvePatch.ps1 `
-  -EveJSPath 'C:\Games\EveJS-v0.12.3'
+  -EveJSPath 'C:\Games\EveJS-v0.12.3.1'
 ```
 
 Or use the wrapper:
 
 ```bat
-installer\Install.bat "C:\Games\EveJS-v0.12.3"
+installer\Install.bat "C:\Games\EveJS-v0.12.3.1"
 ```
 
 The installer:
@@ -82,13 +82,13 @@ Run the non-mutating installed-file verification:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\installer\Verify-XEvePatch.ps1 `
-  -EveJSPath 'C:\Games\EveJS-v0.12.3'
+  -EveJSPath 'C:\Games\EveJS-v0.12.3.1'
 ```
 
 The wrapper form is:
 
 ```bat
-installer\Verify.bat "C:\Games\EveJS-v0.12.3"
+installer\Verify.bat "C:\Games\EveJS-v0.12.3.1"
 ```
 
 To include the patch's test suite after normal server dependencies are
@@ -96,13 +96,13 @@ installed:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\installer\Verify-XEvePatch.ps1 `
-  -EveJSPath 'C:\Games\EveJS-v0.12.3' -RunTests
+  -EveJSPath 'C:\Games\EveJS-v0.12.3.1' -RunTests
 ```
 
 Or:
 
 ```bat
-installer\Verify.bat "C:\Games\EveJS-v0.12.3" --run-tests
+installer\Verify.bat "C:\Games\EveJS-v0.12.3.1" --run-tests
 ```
 
 A file-integrity pass confirms that the expected patch is present. A test pass
@@ -146,7 +146,7 @@ normal configuration changes do not invalidate patch verification.
 Stop the server and run:
 
 ```bat
-installer\Uninstall.bat "C:\Games\EveJS-v0.12.3"
+installer\Uninstall.bat "C:\Games\EveJS-v0.12.3.1"
 ```
 
 Uninstall is deliberately conservative. If a patched file has changed since
@@ -161,5 +161,5 @@ patch was running.
 ## Installation refusal is a safety result
 
 Do not bypass a baseline, hash, added-path, or changed-file refusal. Extract a
-fresh v0.12.3 copy, verify its archive hash, and try again. Manual partial
+fresh v0.12.3.1 copy, verify its archive hash, and try again. Manual partial
 application makes later verification and uninstall unreliable.
