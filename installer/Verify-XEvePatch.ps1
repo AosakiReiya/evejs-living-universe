@@ -112,6 +112,34 @@ function Test-Files {
     }
 }
 
+function Test-RuntimeStaticDataReferences {
+    param([string]$Root, [hashtable]$InstalledMap)
+    $pattern = [regex]::new(
+        '(?<relative>(?:\.\./)+gameStore/data/[A-Za-z0-9._-]+/data\.json)',
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
+    $rootPrefix = $Root.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+    foreach ($path in ($InstalledMap.Keys | Sort-Object)) {
+        if (-not $path.EndsWith('.js', [StringComparison]::OrdinalIgnoreCase)) {
+            continue
+        }
+        $sourcePath = Resolve-TargetFile $Root $path
+        $sourceText = [IO.File]::ReadAllText($sourcePath)
+        foreach ($match in $pattern.Matches($sourceText)) {
+            $referencePath = [IO.Path]::GetFullPath(
+                (Join-Path (Split-Path -Parent $sourcePath) $match.Groups['relative'].Value)
+            )
+            if (-not $referencePath.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+                throw "Runtime static-data reference escapes EveJSPath: $path"
+            }
+            if (-not (Test-Path -LiteralPath $referencePath -PathType Leaf)) {
+                $missingPath = $referencePath.Substring($rootPrefix.Length).Replace('\', '/')
+                throw "Runtime static-data reference is missing: $path -> $missingPath"
+            }
+        }
+    }
+}
+
 function Invoke-PatchCheck {
     param([string]$Root, [string]$PatchPath, [switch]$Reverse)
     $arguments = @('-c', 'core.autocrlf=true', '-C', $Root, 'apply', '--check', '--binary', '--whitespace=nowarn')
@@ -125,6 +153,15 @@ function Invoke-PatchCheck {
 
 function Invoke-VerificationTests {
     param([string]$Root)
+    $powershell = Get-Command powershell.exe -ErrorAction SilentlyContinue
+    if ($null -eq $powershell) { throw 'powershell.exe is required for -RunTests.' }
+    $marketLauncherTest = Join-Path $Root 'tools\ServerStack\VerifyEnsureMarketServer.ps1'
+    Write-Host '[X-Eve] Running VerifyEnsureMarketServer.ps1'
+    & $powershell.Source -NoLogo -NoProfile -ExecutionPolicy Bypass -File $marketLauncherTest
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Verification command failed: VerifyEnsureMarketServer.ps1'
+    }
+
     $node = Get-Command node.exe -ErrorAction SilentlyContinue
     if ($null -eq $node) { throw 'node.exe is required for -RunTests.' }
     $serverRoot = Join-Path $Root 'server'
@@ -183,7 +220,7 @@ if ($null -eq (Get-Command git -ErrorAction SilentlyContinue)) {
 $target = Get-CanonicalTarget $EveJSPath
 $releaseRoot = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $PSCommandPath) '..'))
 $patchDirectory = Join-Path $releaseRoot 'patches\v0.12.3.1'
-$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.2.0.patch'
+$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.2.1.patch'
 $baselineManifest = Read-Json (Join-Path $patchDirectory 'baseline-manifest.json') 'Baseline manifest'
 $installedManifest = Read-Json (Join-Path $patchDirectory 'installed-manifest.json') 'Installed manifest'
 
@@ -204,6 +241,7 @@ if (Test-Path -LiteralPath $statePath -PathType Leaf) {
         throw 'Local install state belongs to a different patch.'
     }
     Test-Files $target $installedMap -Installed
+    Test-RuntimeStaticDataReferences $target $installedMap
     Invoke-PatchCheck $target $patchPath -Reverse
     Write-Host '[X-Eve] Installed patch integrity and reverse-apply checks passed.'
     if ($RunTests) { Invoke-VerificationTests $target }
