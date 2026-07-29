@@ -1,6 +1,6 @@
 # X-Eve Living Universe
 
-X-Eve Living Universe is an independent source patch for a compatible v0.12.3
+X-Eve Living Universe is an independent source patch for a compatible v0.12.3.1
 server baseline. It adds a persistent virtual NPC population, regional
 economic activity, materialized traffic around players, conflict, industry,
 logistics, and supporting performance controls.
@@ -11,8 +11,11 @@ logistics, and supporting performance controls.
 > configuration. Obtain a compatible base independently and apply the patch to
 > your own clean copy.
 
-`v0.1.0` is the first public release for the exact EveJS v0.12.3 compatible
-baseline. Back up any installation and world data before applying the patch.
+`v0.2.0` is the current release for the exact EveJS v0.12.3.1 compatible
+baseline. It includes the replacement-economy, procurement, mobilization,
+faction-hostility, kill-credit, and industrial-crew updates developed after
+the first public build. Back up any installation and world data before
+applying the patch.
 
 X Command is intentionally not included in this repository. The Living
 Universe core keeps the industrial-crew services and adapter-neutral command
@@ -21,33 +24,33 @@ patch to its web interface, API, authentication, or account-linking layer.
 
 ## Compatibility
 
-The current patch targets one exact **v0.12.3 compatible server baseline**. The
+The current patch targets one exact **v0.12.3.1 compatible server baseline**. The
 independently obtained archive used to build and verify this release has this
 SHA-256:
 
 ```text
-81E2B48DE1E55D8FAD413137F83FF26C7FEB4FFA943825093FFC1BB17468D27E
+1DEB61A51F808D9F2B330214DA64EC297D9EE5F96EE4B8265692A65F35EEFC1E
 ```
 
 Check an archive in PowerShell with:
 
 ```powershell
-Get-FileHash -Algorithm SHA256 'C:\path\to\EveJS-v0.12.3.zip'
+Get-FileHash -Algorithm SHA256 'C:\path\to\EveJS-v0.12.3.1.zip'
 ```
 
 Do not apply the patch to another server version, an already modified tree, or
-your only working copy. The installer validates the expected v0.12.3 baseline
+your only working copy. The installer validates the expected v0.12.3.1 baseline
 before changing anything and stops on a mismatch.
 
 ## Install
 
 You need Git for Windows, PowerShell, Node.js, Rust, and the Visual Studio C++
 Build Tools used by EveJS's standalone market service. Stop the server and its
-supporting services, extract a clean v0.12.3 base, then run:
+supporting services, extract a clean v0.12.3.1 base, then run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\installer\Install-XEvePatch.ps1 `
-  -EveJSPath 'C:\path\to\EveJS-v0.12.3'
+  -EveJSPath 'C:\path\to\EveJS-v0.12.3.1'
 ```
 
 The installer applies the single versioned patch, verifies the result, and
@@ -55,14 +58,14 @@ rolls back automatically if an installation step fails. The batch-file wrapper
 is equivalent:
 
 ```bat
-installer\Install.bat "C:\path\to\EveJS-v0.12.3"
+installer\Install.bat "C:\path\to\EveJS-v0.12.3.1"
 ```
 
 Verify the installation separately with:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\installer\Verify-XEvePatch.ps1 `
-  -EveJSPath 'C:\path\to\EveJS-v0.12.3'
+  -EveJSPath 'C:\path\to\EveJS-v0.12.3.1'
 ```
 
 See [Installation](docs/INSTALL.md) for backup, verification, test, and
@@ -119,8 +122,16 @@ budgets.
   only where players can observe them.
 - Mining, freight, procurement, regional stock, manufacturing, and market flows
   designed around conserved inputs and completed deliveries.
+- Demand-driven war procurement that players can fill, bounded NPC refinery
+  output, pirate-faction replacement supply, and a closed-loop mobilization
+  controller that scales logistics and industry when losses outpace recovery.
 - Witnessable combat, pirate activity, security responses, losses, and the
   resulting replacement demand.
+- Per-player faction hostility, standing-based shoot-on-sight behavior, and
+  player kill credit for living-faction losses.
+- Corporation-visible industrial crews with Local and corporation-chat
+  presence, friendly relationship projection, pooled defensive drones, and
+  durable crew-level navigation.
 - Bounded schedulers, physical-ship caps, durable state, economy telemetry, and
   performance admission controls.
 - Separately gated estate, wormhole, live-event, and X-Eve experimental
@@ -130,7 +141,7 @@ Read [Architecture](docs/ARCHITECTURE.md) for the simulation model.
 
 ## Repository contents
 
-- `patches/v0.12.3/x-eve-living-universe-v0.1.0.patch` - the single
+- `patches/v0.12.3.1/x-eve-living-universe-v0.2.0.patch` - the single
   versioned source patch.
 - `installer/` - baseline validation, installation, verification, rollback, and
   uninstall helpers.

@@ -1,7 +1,7 @@
 @echo off
 setlocal
 if "%~1"=="" (
-  echo Usage: %~nx0 "C:\path\to\EveJS-v0.12.3" [--run-tests]
+  echo Usage: %~nx0 "C:\path\to\EveJS-v0.12.3.1" [--run-tests]
   exit /b 2
 )
 if /I "%~2"=="--run-tests" (
