@@ -9,9 +9,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $ReleaseName = 'X-Eve Living Universe'
-$ReleaseVersion = 'v0.1.0'
-$BaselineVersion = 'v0.12.3'
-$ExpectedArchiveSha256 = '81E2B48DE1E55D8FAD413137F83FF26C7FEB4FFA943825093FFC1BB17468D27E'
+$ReleaseVersion = 'v0.2.0'
+$BaselineVersion = 'v0.12.3.1'
+$ExpectedArchiveSha256 = '1DEB61A51F808D9F2B330214DA64EC297D9EE5F96EE4B8265692A65F35EEFC1E'
 $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 function Write-Step {
@@ -365,9 +365,10 @@ function Invoke-GitApply {
         [switch]$CheckOnly
     )
 
-    # The release manifests describe exact installed bytes. Ignore a user's
-    # global autocrlf preference so applying the same patch is deterministic.
-    $arguments = @('-c', 'core.autocrlf=false', '-C', $TargetRoot, 'apply')
+    # The supported Windows archive stores text files with CRLF endings. Force
+    # that checkout convention so patch matching and installed bytes do not
+    # depend on the user's global Git configuration.
+    $arguments = @('-c', 'core.autocrlf=true', '-C', $TargetRoot, 'apply')
     if ($CheckOnly) {
         $arguments += '--check'
     }
@@ -405,7 +406,7 @@ function Assert-BaselineFiles {
             continue
         }
         if (-not (Test-Path -LiteralPath $targetPath -PathType Leaf)) {
-            throw "A required v0.12.3 baseline file is missing: $path"
+            throw "A required v0.12.3.1 baseline file is missing: $path"
         }
         $item = Get-Item -LiteralPath $targetPath -Force
         if ([int64]$item.Length -ne [int64]$record.size) {
@@ -413,7 +414,7 @@ function Assert-BaselineFiles {
         }
         $actualSha = Get-Sha256 $targetPath
         if ($actualSha -ne $record.sha256) {
-            throw "Baseline SHA-256 mismatch for $path. The file is modified or is not from the supported EveJS v0.12.3 archive."
+            throw "Baseline SHA-256 mismatch for $path. The file is modified or is not from the supported EveJS v0.12.3.1 archive."
         }
     }
 }
@@ -535,8 +536,8 @@ function Write-JsonAtomically {
 
 $installerRoot = Split-Path -Parent $PSCommandPath
 $releaseRoot = [System.IO.Path]::GetFullPath((Join-Path $installerRoot '..'))
-$patchDirectory = Join-Path $releaseRoot 'patches\v0.12.3'
-$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.1.0.patch'
+$patchDirectory = Join-Path $releaseRoot 'patches\v0.12.3.1'
+$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.2.0.patch'
 $baselineManifestPath = Join-Path $patchDirectory 'baseline-manifest.json'
 $installedManifestPath = Join-Path $patchDirectory 'installed-manifest.json'
 
@@ -552,7 +553,7 @@ if (-not (Test-Path -LiteralPath $patchPath -PathType Leaf)) {
 
 $archiveSha256 = Get-BaselineArchiveSha256 $baselineManifest
 if ($archiveSha256 -ne $ExpectedArchiveSha256) {
-    throw "Baseline manifest archive SHA-256 does not identify the supported EveJS v0.12.3 archive."
+    throw "Baseline manifest archive SHA-256 does not identify the supported EveJS v0.12.3.1 archive."
 }
 $manifestPatchSha256 = Assert-Sha256Text (Get-ObjectProperty $installedManifest @('patchSha256')) 'Installed manifest patchSha256'
 $actualPatchSha256 = Get-Sha256 $patchPath
@@ -664,7 +665,7 @@ catch {
     $rollbackError = $null
     if ($attemptedApply -and -not $installCommitted -and $null -ne $backupRoot) {
         try {
-            Write-Warning 'Installation failed; restoring the verified v0.12.3 baseline.'
+            Write-Warning 'Installation failed; restoring the verified v0.12.3.1 baseline.'
             Restore-Baseline $targetRoot $backupRoot $baselineMap
             if (Test-Path -LiteralPath $installStatePath -PathType Leaf) {
                 [System.IO.File]::Delete($installStatePath)

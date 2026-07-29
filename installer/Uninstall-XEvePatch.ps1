@@ -9,9 +9,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $ReleaseName = 'X-Eve Living Universe'
-$ReleaseVersion = 'v0.1.0'
-$BaselineVersion = 'v0.12.3'
-$ExpectedArchiveSha256 = '81E2B48DE1E55D8FAD413137F83FF26C7FEB4FFA943825093FFC1BB17468D27E'
+$ReleaseVersion = 'v0.2.0'
+$BaselineVersion = 'v0.12.3.1'
+$ExpectedArchiveSha256 = '1DEB61A51F808D9F2B330214DA64EC297D9EE5F96EE4B8265692A65F35EEFC1E'
 
 function Write-Step {
     param([string]$Message)
@@ -429,8 +429,8 @@ function Remove-StagingDirectory {
 
 $installerRoot = Split-Path -Parent $PSCommandPath
 $releaseRoot = [System.IO.Path]::GetFullPath((Join-Path $installerRoot '..'))
-$patchDirectory = Join-Path $releaseRoot 'patches\v0.12.3'
-$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.1.0.patch'
+$patchDirectory = Join-Path $releaseRoot 'patches\v0.12.3.1'
+$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.2.0.patch'
 $baselineManifestPath = Join-Path $patchDirectory 'baseline-manifest.json'
 $installedManifestPath = Join-Path $patchDirectory 'installed-manifest.json'
 
@@ -445,7 +445,7 @@ if (-not (Test-Path -LiteralPath $patchPath -PathType Leaf)) {
 }
 $archiveSha256 = Get-BaselineArchiveSha256 $baselineManifest
 if ($archiveSha256 -ne $ExpectedArchiveSha256) {
-    throw 'Baseline manifest archive SHA-256 does not identify the supported EveJS v0.12.3 archive.'
+    throw 'Baseline manifest archive SHA-256 does not identify the supported EveJS v0.12.3.1 archive.'
 }
 $manifestPatchSha256 = Assert-Sha256Text (Get-ObjectProperty $installedManifest @('patchSha256')) 'Installed manifest patchSha256'
 if ((Get-Sha256 $patchPath) -ne $manifestPatchSha256) {
