@@ -42,7 +42,7 @@ baseline.
 
 - Adds faction hostility evaluation, hostile engagement behavior, kill-credit
   accounting, and standing consequences.
-- Projects hired crews into their employer corporation, Local, corporation
+- Projects managed crews into their employer corporation, Local, corporation
   chat, and friendly relationship state while keeping their retained
   affiliation data.
 - Adds pooled industrial-crew defense, drone and escort participation,
