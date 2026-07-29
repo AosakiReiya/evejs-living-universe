@@ -1,8 +1,8 @@
 diff --git a/Play.bat b/Play.bat
-index 81a7444c16c5a4a69945a3827fa46b87119afd3f..1a330864fe6673ed5c1aca2dbf80605707a8469f 100644
+index 81a7444c16c5a4a69945a3827fa46b87119afd3f..b97fbe28897354d9aae3bc81c2ab6665cca919cc 100644
 --- a/Play.bat
 +++ b/Play.bat
-@@ -312,25 +312,48 @@ exit /b %errorlevel%
+@@ -312,25 +312,57 @@ exit /b %errorlevel%
  
  :EnsureServerAvailable
  echo   Checking local EvEJS server...
@@ -14,6 +14,15 @@ index 81a7444c16c5a4a69945a3827fa46b87119afd3f..1a330864fe6673ed5c1aca2dbf806057
 +call :CheckLivingUniverseReady
 +set "EVEJS_LIVING_UNIVERSE_OK=!errorlevel!"
 +if "!EVEJS_GAME_PORT_OK!"=="0" if "!EVEJS_PROXY_OK!"=="0" if "!EVEJS_LIVING_UNIVERSE_OK!"=="0" (
++  echo   Local server is ready.
++  exit /b 0
++)
++
++rem A running Docker server keeps runtime telemetry inside its Linux volume,
++rem where this Windows launcher cannot validate either the file or its PID.
++rem The reachable game and proxy endpoints remain the cross-mode readiness
++rem contract and prevent Play.bat from starting a conflicting native server.
++if "!EVEJS_GAME_PORT_OK!"=="0" if "!EVEJS_PROXY_OK!"=="0" (
 +  echo   Local server is ready.
 +  exit /b 0
 +)
@@ -56,7 +65,7 @@ index 81a7444c16c5a4a69945a3827fa46b87119afd3f..1a330864fe6673ed5c1aca2dbf806057
  echo.
  echo       Expected:
  echo         Game TCP: 127.0.0.1:26000
-@@ -345,6 +368,11 @@ exit /b %errorlevel%
+@@ -345,6 +377,11 @@ exit /b %errorlevel%
  powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $base=[Uri]$env:EVEJS_PROXY_URL; $health=[Uri]::new($base,'health').AbsoluteUri; $r=Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 -Uri $health; if($r.StatusCode -ge 200 -and $r.StatusCode -lt 500){ exit 0 }; exit 1 } catch { exit 1 }" >nul 2>&1
  exit /b %errorlevel%
  
@@ -99000,6 +99009,217 @@ index 0000000000000000000000000000000000000000..c0202bdf24b25d7ff015a6aa3800be64
 +                Start-Sleep -Milliseconds 100
 +            }
 +        } while (Test-Path -LiteralPath $temporaryRoot)
++    }
++}
+diff --git a/tools/ServerStack/VerifyPlayServerAvailability.ps1 b/tools/ServerStack/VerifyPlayServerAvailability.ps1
+new file mode 100644
+index 0000000000000000000000000000000000000000..a2358c3985b13200a34007a182e666a5890df061
+--- /dev/null
++++ b/tools/ServerStack/VerifyPlayServerAvailability.ps1
+@@ -0,0 +1,205 @@
++[CmdletBinding()]
++param()
++
++$ErrorActionPreference = "Stop"
++Set-StrictMode -Version Latest
++
++$playPath = [System.IO.Path]::GetFullPath(
++    (Join-Path $PSScriptRoot "..\..\Play.bat")
++)
++if (-not (Test-Path -LiteralPath $playPath -PathType Leaf)) {
++    throw "Play.bat is missing: $playPath"
++}
++
++$playText = [System.IO.File]::ReadAllText($playPath)
++$ensureMarker = ":EnsureServerAvailable"
++$nativeStartMarker = "if not defined EVEJS_SERVER_START_IN_PROGRESS"
++$loopMarker = "for /L %%N in (1,1,900) do ("
++$checkMarker = "`n:CheckGameServerPort"
++
++$ensureIndex = $playText.IndexOf(
++    $ensureMarker,
++    [System.StringComparison]::Ordinal
++)
++$nativeStartIndex = $playText.IndexOf(
++    $nativeStartMarker,
++    [System.StringComparison]::Ordinal
++)
++$loopIndex = $playText.IndexOf(
++    $loopMarker,
++    [System.StringComparison]::Ordinal
++)
++$checkIndex = $playText.IndexOf(
++    $checkMarker,
++    $loopIndex,
++    [System.StringComparison]::Ordinal
++)
++if (
++    $ensureIndex -lt 0 -or
++    $nativeStartIndex -le $ensureIndex -or
++    $loopIndex -le $nativeStartIndex -or
++    $checkIndex -le $loopIndex
++) {
++    throw "Play.bat server-availability sections are missing or out of order."
++}
++
++$decisionStartIndex = $playText.IndexOf(
++    "call :CheckGameServerPort",
++    $ensureIndex,
++    [System.StringComparison]::Ordinal
++)
++if (
++    $decisionStartIndex -lt $ensureIndex -or
++    $decisionStartIndex -ge $nativeStartIndex
++) {
++    throw "Play.bat initial endpoint checks are missing."
++}
++
++$preStartDecision = $playText.Substring(
++    $decisionStartIndex,
++    $nativeStartIndex - $decisionStartIndex
++)
++$strictReadyLine = (
++    'if "!EVEJS_GAME_PORT_OK!"=="0" if "!EVEJS_PROXY_OK!"=="0" ' +
++    'if "!EVEJS_LIVING_UNIVERSE_OK!"=="0" ('
++)
++$endpointReadyLine = (
++    'if "!EVEJS_GAME_PORT_OK!"=="0" if "!EVEJS_PROXY_OK!"=="0" ('
++)
++$strictIndex = $preStartDecision.IndexOf(
++    $strictReadyLine,
++    [System.StringComparison]::Ordinal
++)
++$endpointIndex = $preStartDecision.IndexOf(
++    $endpointReadyLine,
++    [System.StringComparison]::Ordinal
++)
++if ($strictIndex -lt 0) {
++    throw "Play.bat initial Living Universe readiness check is missing."
++}
++if ($endpointIndex -le $strictIndex) {
++    throw (
++        "Play.bat must accept healthy game and proxy endpoints before " +
++        "attempting to start a native server."
++    )
++}
++
++$pollingBlock = $playText.Substring(
++    $loopIndex,
++    $checkIndex - $loopIndex
++)
++if (
++    $pollingBlock.IndexOf(
++        $strictReadyLine,
++        [System.StringComparison]::Ordinal
++    ) -lt 0
++) {
++    throw "Play.bat native-start polling no longer waits for Living Universe."
++}
++if (
++    $pollingBlock.IndexOf(
++        $endpointReadyLine,
++        [System.StringComparison]::Ordinal
++    ) -ge 0
++) {
++    throw (
++        "Play.bat native-start polling must retain the stricter Living " +
++        "Universe readiness gate."
++    )
++}
++
++$temporaryRoot = [System.IO.Path]::GetFullPath(
++    (Join-Path ([System.IO.Path]::GetTempPath()) (
++        "evejs-play-availability-test-" + [Guid]::NewGuid().ToString("N")
++    ))
++)
++[System.IO.Directory]::CreateDirectory($temporaryRoot) | Out-Null
++$harnessPath = Join-Path $temporaryRoot "availability-harness.bat"
++
++try {
++    $harness = @(
++        "@echo off",
++        "setlocal EnableDelayedExpansion",
++        $preStartDecision.TrimEnd(),
++        "exit /b 42",
++        ":CheckGameServerPort",
++        "exit /b %TEST_GAME_RESULT%",
++        ":CheckProxyHealth",
++        "exit /b %TEST_PROXY_RESULT%",
++        ":CheckLivingUniverseReady",
++        "exit /b %TEST_LIVING_RESULT%"
++    ) -join "`r`n"
++    [System.IO.File]::WriteAllText(
++        $harnessPath,
++        $harness + "`r`n",
++        [System.Text.Encoding]::ASCII
++    )
++
++    $scenarios = @(
++        [pscustomobject]@{
++            Name = "Docker endpoints ready without host telemetry"
++            Game = 0
++            Proxy = 0
++            Living = 1
++            Expected = 0
++        },
++        [pscustomobject]@{
++            Name = "Native endpoints and Living Universe ready"
++            Game = 0
++            Proxy = 0
++            Living = 0
++            Expected = 0
++        },
++        [pscustomobject]@{
++            Name = "Game endpoint unavailable"
++            Game = 1
++            Proxy = 0
++            Living = 0
++            Expected = 42
++        },
++        [pscustomobject]@{
++            Name = "Proxy endpoint unavailable"
++            Game = 0
++            Proxy = 1
++            Living = 0
++            Expected = 42
++        }
++    )
++
++    foreach ($scenario in $scenarios) {
++        $command = (
++            "set TEST_GAME_RESULT={0}&& " +
++            "set TEST_PROXY_RESULT={1}&& " +
++            "set TEST_LIVING_RESULT={2}&& " +
++            "call `"{3}`""
++        ) -f (
++            $scenario.Game,
++            $scenario.Proxy,
++            $scenario.Living,
++            $harnessPath
++        )
++        & $env:ComSpec /d /c $command | Out-Null
++        $actual = $LASTEXITCODE
++        if ($actual -ne $scenario.Expected) {
++            throw (
++                "$($scenario.Name) returned $actual; expected " +
++                "$($scenario.Expected)."
++            )
++        }
++    }
++
++    Write-Host "Play.bat server-availability verification passed."
++} finally {
++    $systemTemporaryRoot = [System.IO.Path]::GetFullPath(
++        [System.IO.Path]::GetTempPath()
++    ).TrimEnd("\", "/") + [System.IO.Path]::DirectorySeparatorChar
++    if (
++        $temporaryRoot.StartsWith(
++            $systemTemporaryRoot,
++            [System.StringComparison]::OrdinalIgnoreCase
++        ) -and
++        (Test-Path -LiteralPath $temporaryRoot -PathType Container)
++    ) {
++        Remove-Item -LiteralPath $temporaryRoot -Recurse -Force
 +    }
 +}
 diff --git a/tools/market-seed/src/main.rs b/tools/market-seed/src/main.rs

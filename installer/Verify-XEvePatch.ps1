@@ -155,6 +155,13 @@ function Invoke-VerificationTests {
     param([string]$Root)
     $powershell = Get-Command powershell.exe -ErrorAction SilentlyContinue
     if ($null -eq $powershell) { throw 'powershell.exe is required for -RunTests.' }
+    $playLauncherTest = Join-Path $Root 'tools\ServerStack\VerifyPlayServerAvailability.ps1'
+    Write-Host '[X-Eve] Running VerifyPlayServerAvailability.ps1'
+    & $powershell.Source -NoLogo -NoProfile -ExecutionPolicy Bypass -File $playLauncherTest
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Verification command failed: VerifyPlayServerAvailability.ps1'
+    }
+
     $marketLauncherTest = Join-Path $Root 'tools\ServerStack\VerifyEnsureMarketServer.ps1'
     Write-Host '[X-Eve] Running VerifyEnsureMarketServer.ps1'
     & $powershell.Source -NoLogo -NoProfile -ExecutionPolicy Bypass -File $marketLauncherTest
@@ -220,7 +227,7 @@ if ($null -eq (Get-Command git -ErrorAction SilentlyContinue)) {
 $target = Get-CanonicalTarget $EveJSPath
 $releaseRoot = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $PSCommandPath) '..'))
 $patchDirectory = Join-Path $releaseRoot 'patches\v0.12.3.1'
-$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.2.1.patch'
+$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.2.2.patch'
 $baselineManifest = Read-Json (Join-Path $patchDirectory 'baseline-manifest.json') 'Baseline manifest'
 $installedManifest = Read-Json (Join-Path $patchDirectory 'installed-manifest.json') 'Installed manifest'
 
