@@ -1,11 +1,11 @@
 {
     "schemaVersion":  1,
-    "release":  "v0.2.0",
-    "patchFile":  "x-eve-living-universe-v0.2.0.patch",
-    "patchSha256":  "8374D730DC5CE2726037F229096C9FF1174FFB953544FAB7E68B26DD0BF4B11A",
-    "fileCount":  197,
+    "release":  "v0.2.1",
+    "patchFile":  "x-eve-living-universe-v0.2.1.patch",
+    "patchSha256":  "FD0F6A7FD3EACAF47649BEC0D231006171978442708F1476114A9533569DCC79",
+    "fileCount":  199,
     "modifiedFileCount":  64,
-    "addedFileCount":  133,
+    "addedFileCount":  135,
     "files":  [
                   {
                       "path":  "evejs.config.x-eve.json",
@@ -429,8 +429,8 @@
                   },
                   {
                       "path":  "server/scripts/verifyXEveCore.js",
-                      "sha256":  "AA61AC3DF6CA1B43800C0823D41C8717AB35D30E95AA78AFD774D909CC3D4BD6",
-                      "size":  77774,
+                      "sha256":  "01077B6B4BDD823324C26E0BE373962B82669F9F6DE94594B7C327E932CB9854",
+                      "size":  79511,
                       "kind":  "added"
                   },
                   {
@@ -459,9 +459,15 @@
                   },
                   {
                       "path":  "server/src/config/index.js",
-                      "sha256":  "083EAB3DEF9516E5F3B27FE63B1F69D02DA12950BAFED0938C852748D7AEA151",
-                      "size":  164612,
+                      "sha256":  "80E2AF44DC5A3F6C394A72D8A0D2703387B47D46F73788FD7D85E6492DE696DC",
+                      "size":  164647,
                       "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/gameStore/data/liveEventDefinitions/data.json",
+                      "sha256":  "1C9D372B1E50402B59AEC02401AB16459752A80E4F427DF58C57635459814FF9",
+                      "size":  2237,
+                      "kind":  "added"
                   },
                   {
                       "path":  "server/src/gameStore/index.js",
@@ -807,8 +813,8 @@
                   },
                   {
                       "path":  "server/src/services/xEve/xEveLoadGovernor.js",
-                      "sha256":  "BF630B2AFD1E25B0B1969497D55A27012A1C46F085DE5156ECC6961B78B58C56",
-                      "size":  8082,
+                      "sha256":  "01FB15BEA335BF43821474A339A5CF6809CD07A5208BC3188BC533C8D63E78A3",
+                      "size":  8083,
                       "kind":  "added"
                   },
                   {
@@ -819,8 +825,8 @@
                   },
                   {
                       "path":  "server/src/services/xEve/xEveRuntime.js",
-                      "sha256":  "CF94212ED0306DE40801DF666DF71C1C7E5F28426B4C96E79A8F7813DE81550A",
-                      "size":  88558,
+                      "sha256":  "F34BC2AB53E7CBBBD9A87E46850D22D585FC80AE2B278A696B507EC37CE654E6",
+                      "size":  88559,
                       "kind":  "added"
                   },
                   {
@@ -1179,14 +1185,20 @@
                   },
                   {
                       "path":  "tools/ServerStack/EnsureMarketServer.ps1",
-                      "sha256":  "CC3C5146A40DF6E3DCAB034DEB1F5A2B973C388290787B9175DB556E53CA8282",
-                      "size":  8380,
+                      "sha256":  "A1A6E5BE5EA6CA8F64115D5FFFFDDA01D0F6BC6A04C01DB914311102A85D47AB",
+                      "size":  8697,
                       "kind":  "added"
                   },
                   {
                       "path":  "tools/ServerStack/TestLivingUniverseReady.ps1",
                       "sha256":  "653B844685C5024BA00CAECC3A6E98BA83C7CD9EFF670468FA5F124C8F497234",
                       "size":  5499,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "tools/ServerStack/VerifyEnsureMarketServer.ps1",
+                      "sha256":  "5CFF3C96A401104F6E529A07D7EFF62EC79983D79D278F7DDD9BCAC38DB43A16",
+                      "size":  3025,
                       "kind":  "added"
                   }
               ]
