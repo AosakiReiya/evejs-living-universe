@@ -1,11 +1,11 @@
 {
     "schemaVersion":  1,
-    "release":  "v0.2.1",
-    "patchFile":  "x-eve-living-universe-v0.2.1.patch",
-    "patchSha256":  "FD0F6A7FD3EACAF47649BEC0D231006171978442708F1476114A9533569DCC79",
-    "fileCount":  199,
+    "release":  "v0.2.2",
+    "patchFile":  "x-eve-living-universe-v0.2.2.patch",
+    "patchSha256":  "5448DDB82E0715C8C953F86944BE1ADD48710089BBA4EA03D3A2EC1216C11083",
+    "fileCount":  200,
     "modifiedFileCount":  64,
-    "addedFileCount":  135,
+    "addedFileCount":  136,
     "files":  [
                   {
                       "path":  "evejs.config.x-eve.json",
@@ -33,8 +33,8 @@
                   },
                   {
                       "path":  "Play.bat",
-                      "sha256":  "012FAB063E4D3726FDC0842D99740C117094F7BF139091F1C836D17AFF4AFF0B",
-                      "size":  26982,
+                      "sha256":  "941092F95714DE19DB47C6E9200E50D1FCA1D5EC9FDDCDEF4563214D44E26ED3",
+                      "size":  27403,
                       "kind":  "modified"
                   },
                   {
@@ -1199,6 +1199,12 @@
                       "path":  "tools/ServerStack/VerifyEnsureMarketServer.ps1",
                       "sha256":  "5CFF3C96A401104F6E529A07D7EFF62EC79983D79D278F7DDD9BCAC38DB43A16",
                       "size":  3025,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "tools/ServerStack/VerifyPlayServerAvailability.ps1",
+                      "sha256":  "EEA10185448911518BBF03A05C5DBE78FEDB270224C9BFDFF8E4EA1928FA4BA2",
+                      "size":  5817,
                       "kind":  "added"
                   }
               ]

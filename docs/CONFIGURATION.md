@@ -1,6 +1,6 @@
 # Configuration
 
-The v0.2.1 patch installs an X-Eve profile that is loaded automatically by the
+The v0.2.2 patch installs an X-Eve profile that is loaded automatically by the
 ordinary EveJS server. Starting `Play.bat` or `StartServer.bat` enables the
 Living Universe, economy, conflict, industrial crews, live events, family
 estate, and X-Eve with 5,000 persistent pilots. No X-Eve-specific launcher is
@@ -26,7 +26,7 @@ should never be committed to this patch repository.
 
 The installed profile uses these principal values:
 
-| JSON key | Source default | Installed v0.2.1 value |
+| JSON key | Source default | Installed v0.2.2 value |
 | --- | ---: | ---: |
 | `familyEstateEnabled` | `false` | `true` |
 | `livingUniverseEnabled` | `false` | `true` |

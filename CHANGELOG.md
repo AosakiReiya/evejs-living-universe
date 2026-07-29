@@ -2,6 +2,23 @@
 
 All notable public patch releases are recorded here.
 
+## 0.2.2 - 2026-07-29
+
+Docker launcher interoperability hotfix for the exact EveJS v0.12.3.1
+compatible baseline.
+
+### Launcher readiness
+
+- Treats reachable game and proxy endpoints as the cross-mode readiness
+  contract when `Play.bat` finds an already-running server.
+- Prevents a healthy Docker deployment from launching a conflicting second
+  native server when Linux runtime telemetry is not visible on the Windows
+  host or its container PID cannot be validated as a Windows process.
+- Retains the stricter Living Universe telemetry check while `Play.bat` waits
+  for a native server that it started itself.
+- Adds a launcher regression covering Docker-ready, fully ready, missing-game,
+  and missing-proxy combinations.
+
 ## 0.2.1 - 2026-07-29
 
 First-start and scheduler-capacity hotfix for the exact EveJS v0.12.3.1

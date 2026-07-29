@@ -449,7 +449,7 @@ $patchKinds = @{}
 if ($patchFiles.Count -eq 1) {
   $canonicalPatch = $patchFiles[0]
   $canonicalPatchPath = Convert-ToRepositoryPath -FullName $canonicalPatch.FullName
-  if ($canonicalPatchPath -cne 'patches/v0.12.3.1/x-eve-living-universe-v0.2.1.patch') {
+  if ($canonicalPatchPath -cne 'patches/v0.12.3.1/x-eve-living-universe-v0.2.2.patch') {
     Add-AuditFailure "Canonical patch has an unexpected release path or name: $canonicalPatchPath"
   }
 

@@ -11,10 +11,11 @@ logistics, and supporting performance controls.
 > configuration. Obtain a compatible base independently and apply the patch to
 > your own clean copy.
 
-`v0.2.1` is the current release for the exact EveJS v0.12.3.1 compatible
+`v0.2.2` is the current release for the exact EveJS v0.12.3.1 compatible
 baseline. It includes the replacement-economy, procurement, mobilization,
 faction-hostility, kill-credit, and industrial-crew updates developed after
-the first public build, plus first-start and X-Eve scheduler-capacity fixes.
+the first public build, plus first-start, X-Eve scheduler-capacity, and
+Docker launcher-readiness fixes.
 Back up any installation and world data before applying the patch.
 
 X Command is intentionally not included in this repository. The Living
@@ -80,6 +81,11 @@ path automatically. That path starts the market dependency, the EveJS server,
 and then waits for the 5,000-pilot universe, X-Eve, market stock cache, and
 proxy before launching the client.
 
+When a Docker server is already running, `Play.bat` accepts the reachable game
+and proxy endpoints as ready without requiring Windows to read
+container-internal runtime telemetry or validate a Linux PID. This prevents
+the launcher from starting a conflicting native server alongside Docker.
+
 There is no X-Eve-specific player launcher and no private test profile. Normal
 first-run setup starts from the imported Jita + New Caldari base market data.
 The same regular startup synchronizes the NPC-station directory and Living
@@ -141,7 +147,7 @@ Read [Architecture](docs/ARCHITECTURE.md) for the simulation model.
 
 ## Repository contents
 
-- `patches/v0.12.3.1/x-eve-living-universe-v0.2.1.patch` - the single
+- `patches/v0.12.3.1/x-eve-living-universe-v0.2.2.patch` - the single
   versioned source patch.
 - `installer/` - baseline validation, installation, verification, rollback, and
   uninstall helpers.
