@@ -11,11 +11,11 @@ logistics, and supporting performance controls.
 > configuration. Obtain a compatible base independently and apply the patch to
 > your own clean copy.
 
-`v0.2.0` is the current release for the exact EveJS v0.12.3.1 compatible
+`v0.2.1` is the current release for the exact EveJS v0.12.3.1 compatible
 baseline. It includes the replacement-economy, procurement, mobilization,
 faction-hostility, kill-credit, and industrial-crew updates developed after
-the first public build. Back up any installation and world data before
-applying the patch.
+the first public build, plus first-start and X-Eve scheduler-capacity fixes.
+Back up any installation and world data before applying the patch.
 
 X Command is intentionally not included in this repository. The Living
 Universe core keeps the industrial-crew services and adapter-neutral command
@@ -141,7 +141,7 @@ Read [Architecture](docs/ARCHITECTURE.md) for the simulation model.
 
 ## Repository contents
 
-- `patches/v0.12.3.1/x-eve-living-universe-v0.2.0.patch` - the single
+- `patches/v0.12.3.1/x-eve-living-universe-v0.2.1.patch` - the single
   versioned source patch.
 - `installer/` - baseline validation, installation, verification, rollback, and
   uninstall helpers.

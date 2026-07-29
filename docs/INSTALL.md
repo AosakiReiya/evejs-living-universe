@@ -105,11 +105,13 @@ Or:
 installer\Verify.bat "C:\Games\EveJS-v0.12.3.1" --run-tests
 ```
 
-A file-integrity pass confirms that the expected patch is present. A test pass
-also exercises the bundled server-side verification scripts. Run the ordinary
-`Play.bat` once first so EveJS has installed its server dependencies and created
-the local database, then stop the server before using `--run-tests`. The
-living-economy integration check runs only when market RPC is available.
+A file-integrity pass confirms that the expected patch is present and that
+every static GameStore data path referenced by patched runtime code exists. A
+test pass also exercises the bundled server-side verification scripts and the
+first-run market batch-exit regression check. Run the ordinary `Play.bat` once
+first so EveJS has installed its server dependencies and created the local
+database, then stop the server before using `--run-tests`. The living-economy
+integration check runs only when market RPC is available.
 
 ## 5. Start with the regular player launcher
 

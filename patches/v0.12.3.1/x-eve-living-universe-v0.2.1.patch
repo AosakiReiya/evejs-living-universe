@@ -21580,10 +21580,10 @@ index 0000000000000000000000000000000000000000..d45645bab09e6079e904f9f5c60005c1
 +main();
 diff --git a/server/scripts/verifyXEveCore.js b/server/scripts/verifyXEveCore.js
 new file mode 100644
-index 0000000000000000000000000000000000000000..bddf115e56a9a45a9b5f649b75eba81cb389aaf7
+index 0000000000000000000000000000000000000000..f02a28f122809a4634b9da27ad462883e1eb4898
 --- /dev/null
 +++ b/server/scripts/verifyXEveCore.js
-@@ -0,0 +1,1993 @@
+@@ -0,0 +1,2044 @@
 +"use strict";
 +
 +// Exercise the fail-closed source gate independently of the installed play
@@ -21680,7 +21680,7 @@ index 0000000000000000000000000000000000000000..bddf115e56a9a45a9b5f649b75eba81c
 +  assert.equal(config.xEveSchedulerIntervalMs, 1_000);
 +  assert.equal(config.xEveSchedulerBudgetMs, 2);
 +  assert.equal(config.xEveDurabilityIntervalMs, 2_000);
-+  assert.equal(config.xEveMaxJobsPerPass, 8);
++  assert.equal(config.xEveMaxJobsPerPass, 32);
 +  assert.equal(config.xEveMaxRetryAttempts, 8);
 +  assert.equal(config.xEveTickWarningMs, 120);
 +  assert.equal(config.xEveTickOverloadMs, 130);
@@ -22097,6 +22097,7 @@ index 0000000000000000000000000000000000000000..bddf115e56a9a45a9b5f649b75eba81c
 +  assert.equal(sustainedRecovery.evaluate(ticks(110), 7_000).mode, MODE.RECOVERING);
 +  assert.equal(sustainedRecovery.evaluate(ticks(110), 11_999).mode, MODE.RECOVERING);
 +  assert.equal(sustainedRecovery.evaluate(ticks(110), 12_000).mode, MODE.HEALTHY);
++  assert.equal(sustainedRecovery.lastPolicy.maxJobs, 32);
 +  assert.equal(new XEveLoadGovernor().evaluate(ticks(105, 5), 1_000).mode, MODE.WARMING);
 +  assert.equal(new XEveLoadGovernor().evaluate(ticks(1_200, 1), 1_000).mode, MODE.UNPLAYABLE);
 +  return governor.getStatus();
@@ -22298,6 +22299,55 @@ index 0000000000000000000000000000000000000000..bddf115e56a9a45a9b5f649b75eba81c
 +  assert.equal(disabled.timer, null);
 +
 +  return runtime.getSnapshot();
++}
++
++function verifyObservationBurstCapacity() {
++  const nowMs = 1_700_150_000_000;
++  const stateStore = createMemoryStateStore();
++  const runtime = new XEveRuntime({
++    stateStore,
++    clock: () => nowMs,
++    monotonicClock: () => 0,
++    options: {
++      enabled: true,
++      schedulerIntervalMs: 60_000,
++      schedulerBudgetMs: 2,
++      tickSampleCount: 20,
++      recoveryMs: 0,
++    },
++  });
++  assert.equal(runtime.options.maxJobsPerPass, 32);
++  assert.equal(runtime.start({ force: true }).success, true);
++
++  const burstSize = 24;
++  for (let index = 0; index < burstSize; index += 1) {
++    const event = runtime.ingestEvent({
++      source: "living-economy",
++      sourceEventID: `LEE-BURST-${String(index).padStart(5, "0")}`,
++      eventType: "mining_arrival",
++      occurredAtMs: nowMs,
++      payload: {
++        stationID: 60_003_760,
++        oreUnits: index + 1,
++      },
++    }, { nowMs });
++    assert.equal(event.success, true);
++  }
++
++  assert.equal(runtime.getSnapshot().scheduler.backlogTotal, burstSize);
++  const drained = runtime.runDueWork(nowMs, { tickSummaries: ticks(105) });
++  assert.equal(drained.success, true);
++  assert.equal(drained.data.processedJobs, burstSize);
++  assert.equal(drained.data.backlogByClass.maintenance, 0);
++  assert.equal(stateStore.listInboxMessages().length, 0);
++  assert.equal(runtime.stop().success, true);
++
++  return {
++    configuredMaxJobsPerPass: runtime.options.maxJobsPerPass,
++    burstSize,
++    processedJobs: drained.data.processedJobs,
++    remainingMaintenanceBacklog: drained.data.backlogByClass.maintenance,
++  };
 +}
 +
 +function verifySchedulerBudgetAndRecovery() {
@@ -23550,6 +23600,7 @@ index 0000000000000000000000000000000000000000..bddf115e56a9a45a9b5f649b75eba81c
 +      stateShapes: verifyStateShapes(),
 +      governor: verifyGovernor(),
 +      runtime: verifyRuntime(),
++      observationBurstCapacity: verifyObservationBurstCapacity(),
 +      schedulerSafety: verifySchedulerBudgetAndRecovery(),
 +      handlerQuarantine: verifyHandlerQuarantine(),
 +      handlerEffectIdempotency: verifyHandlerEffectIdempotency(),
@@ -24862,7 +24913,7 @@ index 728b234e94cd063b0575a02d1f71a7ae75bec680..e37d235a41638a81582d96699fc79943
    if (localPath) {
      return localPath;
 diff --git a/server/src/config/index.js b/server/src/config/index.js
-index 95dd3c383e58da959c32b2c3ee228907c32122fd..441adf4c99c054ca4ec277018a7b13c9ac11ce37 100644
+index 95dd3c383e58da959c32b2c3ee228907c32122fd..1af771af1e0e9c516e853a6bd221eaa87d7ec2ae 100644
 --- a/server/src/config/index.js
 +++ b/server/src/config/index.js
 @@ -2,7 +2,9 @@
@@ -25748,13 +25799,13 @@ index 95dd3c383e58da959c32b2c3ee228907c32122fd..441adf4c99c054ca4ec277018a7b13c9
 +  },
 +  {
 +    key: "xEveMaxJobsPerPass",
-+    defaultValue: 8,
++    defaultValue: 32,
 +    envVar: "EVEJS_X_EVE_MAX_JOBS_PER_PASS",
 +    envType: "number",
 +    minValue: 1,
 +    maxValue: 100,
 +    description:
-+      "Maximum X-Eve continuations handled in one scheduler pass; overdue work remains queued.",
++      "Maximum X-Eve continuations handled in one scheduler pass within the configured time budget; overdue work remains queued.",
 +    validValues: "Integer from 1 through 100.",
 +  },
 +  {
@@ -26818,6 +26869,103 @@ index 95dd3c383e58da959c32b2c3ee228907c32122fd..441adf4c99c054ca4ec277018a7b13c9
      fileConfig: fileConfigSnapshot,
      envConfig: envConfigSnapshot,
      resolvedConfig,
+diff --git a/server/src/gameStore/data/liveEventDefinitions/data.json b/server/src/gameStore/data/liveEventDefinitions/data.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..5e53699a0bb0d98120cb868836c331f486518405
+--- /dev/null
++++ b/server/src/gameStore/data/liveEventDefinitions/data.json
+@@ -0,0 +1,91 @@
++{
++  "schemaVersion": 1,
++  "sourceRevision": 2,
++  "definitions": [
++    {
++      "definitionID": "kernel.noop",
++      "revision": 1,
++      "eventType": "noop",
++      "enabled": false,
++      "name": "Live Event Kernel Verification",
++      "lifecycle": {
++        "dormantSeconds": 1,
++        "activeSeconds": 1,
++        "aftermathSeconds": 1
++      },
++      "discovery": {
++        "mode": "none"
++      },
++      "limits": {
++        "physicalShips": 0,
++        "dynamicObjects": 0
++      }
++    },
++    {
++      "definitionID": "industrial.mining.highsec.small",
++      "revision": 2,
++      "eventType": "industrial_mining",
++      "enabled": true,
++      "name": "Independent Industrial Mining Operation",
++      "securityBands": ["highsec"],
++      "lifecycle": {
++        "engagementSeconds": 1800,
++        "aftermathSeconds": 900,
++        "cooldownSeconds": 3600
++      },
++      "discovery": {
++        "mode": "belt_overlay"
++      },
++      "limits": {
++        "physicalShips": 15,
++        "dynamicObjects": 30
++      },
++      "producer": {
++        "enabled": true,
++        "checkIntervalSeconds": 60,
++        "targetActiveCount": 1,
++        "targetSystemIDs": [
++          30000140,
++          30000144,
++          30000145,
++          30001363,
++          30002780,
++          30000143,
++          30000138
++        ]
++      },
++      "content": {
++        "virtualCycleSeconds": 60,
++        "virtualQuantityPerCycle": 500,
++        "virtualTargetsPerCycle": 4,
++        "emptyCheckLimit": 3,
++        "minerCount": 4,
++        "haulerCount": 1,
++        "lastObserverGraceSeconds": 60
++      }
++    },
++    {
++      "definitionID": "battle.aftermath.skirmish.small",
++      "revision": 1,
++      "eventType": "battle_aftermath",
++      "enabled": false,
++      "name": "Fresh Battlefield",
++      "securityBands": ["highsec", "lowsec", "nullsec"],
++      "lifecycle": {
++        "discoverableSeconds": 1800,
++        "materializedSeconds": 2700,
++        "lastObserverGraceSeconds": 600,
++        "cooldownSeconds": 3600
++      },
++      "discovery": {
++        "mode": "cosmic_anomaly"
++      },
++      "limits": {
++        "physicalShips": 8,
++        "dynamicObjects": 48
++      }
++    }
++  ]
++}
++
++
 diff --git a/server/src/gameStore/index.js b/server/src/gameStore/index.js
 index 899cbd0ad438ef0beb26f925248209e24b153229..1ab27fec1b06e70df810cedd73ac17bcaab8fdb2 100644
 --- a/server/src/gameStore/index.js
@@ -56889,7 +57037,7 @@ index 0000000000000000000000000000000000000000..f74585b6a27a55b1f6e0ca7234c08652
 +};
 diff --git a/server/src/services/xEve/xEveLoadGovernor.js b/server/src/services/xEve/xEveLoadGovernor.js
 new file mode 100644
-index 0000000000000000000000000000000000000000..7a63d29eb06fe13ab39e16c23dccfb989df82c6d
+index 0000000000000000000000000000000000000000..084f7847c407f97cd9c2107296156c0b4d8ac1dd
 --- /dev/null
 +++ b/server/src/services/xEve/xEveLoadGovernor.js
 @@ -0,0 +1,235 @@
@@ -56945,7 +57093,7 @@ index 0000000000000000000000000000000000000000..7a63d29eb06fe13ab39e16c23dccfb98
 +      Math.max(1, toFiniteNumber(raw.recoveryThresholdMs, 115)),
 +    ),
 +    healthyBudgetMs: Math.max(0.1, toFiniteNumber(raw.healthyBudgetMs, 2)),
-+    healthyMaxJobs: Math.max(1, Math.trunc(toFiniteNumber(raw.healthyMaxJobs, 8))),
++    healthyMaxJobs: Math.max(1, Math.trunc(toFiniteNumber(raw.healthyMaxJobs, 32))),
 +  };
 +}
 +
@@ -57532,7 +57680,7 @@ index 0000000000000000000000000000000000000000..d50ddfddf10b6080389230c87b14e407
 +};
 diff --git a/server/src/services/xEve/xEveRuntime.js b/server/src/services/xEve/xEveRuntime.js
 new file mode 100644
-index 0000000000000000000000000000000000000000..1d9c2a83e0ebb193477e17b308d1d815ce6c367a
+index 0000000000000000000000000000000000000000..a84ea110110153671a530deae859bcbcdc975652
 --- /dev/null
 +++ b/server/src/services/xEve/xEveRuntime.js
 @@ -0,0 +1,2237 @@
@@ -57696,7 +57844,7 @@ index 0000000000000000000000000000000000000000..1d9c2a83e0ebb193477e17b308d1d815
 +    schedulerIntervalMs: clampInteger(raw.schedulerIntervalMs, 250, 60_000, 1_000),
 +    schedulerBudgetMs: clampNumber(raw.schedulerBudgetMs, 0.1, 10, 2),
 +    durabilityIntervalMs: clampInteger(raw.durabilityIntervalMs, 500, 60_000, 2_000),
-+    maxJobsPerPass: clampInteger(raw.maxJobsPerPass, 1, 100, 8),
++    maxJobsPerPass: clampInteger(raw.maxJobsPerPass, 1, 100, 32),
 +    tickSampleCount: clampInteger(raw.tickSampleCount, 2, 120, 20),
 +    tickWarningMs,
 +    tickOverloadMs,
@@ -98312,10 +98460,10 @@ index 0000000000000000000000000000000000000000..4d06f5590a1ae8d2a08635fbc409b1c0
 +});
 diff --git a/tools/ServerStack/EnsureMarketServer.ps1 b/tools/ServerStack/EnsureMarketServer.ps1
 new file mode 100644
-index 0000000000000000000000000000000000000000..8749288b969b1e180d02daf9c8ae04e269d373ad
+index 0000000000000000000000000000000000000000..949c22a9ccb4776ec52a4cdb2ac9c8c231c886c5
 --- /dev/null
 +++ b/tools/ServerStack/EnsureMarketServer.ps1
-@@ -0,0 +1,232 @@
+@@ -0,0 +1,240 @@
 +param(
 +    [Parameter(Mandatory = $true)]
 +    [string]$RepoRoot,
@@ -98387,16 +98535,20 @@ index 0000000000000000000000000000000000000000..8749288b969b1e180d02daf9c8ae04e2
 +
 +    $quotedPath = '"' + $Path.Replace('"', '""') + '"'
 +    $commandLine = @($quotedPath) + $Arguments
-+    $process = Start-Process `
-+        -FilePath $env:ComSpec `
-+        -ArgumentList @("/d", "/c", ($commandLine -join " ")) `
-+        -WorkingDirectory $script:RepoRoot `
-+        -NoNewWindow `
-+        -Wait `
-+        -PassThru
++    # Start-Process -Wait waits for the complete descendant process tree on
++    # Windows. Rust/MSVC builds can leave a descendant alive after the batch
++    # file itself has completed, which stranded the ordinary first-start path.
++    # Invoke cmd directly so completion follows the batch command's exit code.
++    Push-Location -LiteralPath $script:RepoRoot
++    try {
++        & $env:ComSpec /d /c ($commandLine -join " ")
++        $exitCode = $LASTEXITCODE
++    } finally {
++        Pop-Location
++    }
 +
-+    if ($process.ExitCode -ne 0) {
-+        throw "$([System.IO.Path]::GetFileName($Path)) exited with code $($process.ExitCode)."
++    if ($exitCode -ne 0) {
++        throw "$([System.IO.Path]::GetFileName($Path)) exited with code $exitCode."
 +    }
 +}
 +
@@ -98473,6 +98625,10 @@ index 0000000000000000000000000000000000000000..8749288b969b1e180d02daf9c8ae04e2
 +        $SourceDigest + [Environment]::NewLine,
 +        [Text.UTF8Encoding]::new($false)
 +    )
++}
++
++if ($MyInvocation.InvocationName -eq ".") {
++    return
 +}
 +
 +$marketSourceDigest = Get-MarketSourceDigest
@@ -98751,6 +98907,100 @@ index 0000000000000000000000000000000000000000..a2453ab2b89769f37e6e439bc521c8d4
 +    exit 0
 +} catch {
 +    exit 1
++}
+diff --git a/tools/ServerStack/VerifyEnsureMarketServer.ps1 b/tools/ServerStack/VerifyEnsureMarketServer.ps1
+new file mode 100644
+index 0000000000000000000000000000000000000000..c0202bdf24b25d7ff015a6aa3800be644b553250
+--- /dev/null
++++ b/tools/ServerStack/VerifyEnsureMarketServer.ps1
+@@ -0,0 +1,88 @@
++[CmdletBinding()]
++param()
++
++$ErrorActionPreference = "Stop"
++Set-StrictMode -Version Latest
++
++$ensureScript = Join-Path $PSScriptRoot "EnsureMarketServer.ps1"
++if (-not (Test-Path -LiteralPath $ensureScript -PathType Leaf)) {
++    throw "EnsureMarketServer.ps1 is missing: $ensureScript"
++}
++
++$temporaryRoot = [System.IO.Path]::GetFullPath(
++    (Join-Path ([System.IO.Path]::GetTempPath()) (
++        "evejs-ensure-market-test-" + [Guid]::NewGuid().ToString("N")
++    ))
++)
++[System.IO.Directory]::CreateDirectory($temporaryRoot) | Out-Null
++
++try {
++    # Dot-sourcing loads the helper functions without running market startup.
++    . $ensureScript -RepoRoot $temporaryRoot
++
++    $descendantBatch = Join-Path $temporaryRoot "batch with descendant.bat"
++    [System.IO.File]::WriteAllText(
++        $descendantBatch,
++@"
++@echo off
++powershell.exe -NoLogo -NoProfile -Command "`$ErrorActionPreference='Stop'; Start-Process -WindowStyle Hidden -WorkingDirectory `$env:SystemRoot -FilePath (Join-Path `$env:SystemRoot 'System32\ping.exe') -ArgumentList '-n','8','127.0.0.1'"
++exit /b 0
++"@,
++        [System.Text.Encoding]::ASCII
++    )
++
++    $timer = [System.Diagnostics.Stopwatch]::StartNew()
++    Invoke-BatchFile -Path $descendantBatch
++    $timer.Stop()
++    if ($timer.Elapsed.TotalSeconds -ge 3) {
++        throw (
++            "Invoke-BatchFile waited for a descendant after the batch exited " +
++            "($([Math]::Round($timer.Elapsed.TotalSeconds, 2)) seconds)."
++        )
++    }
++
++    $failureBatch = Join-Path $temporaryRoot "batch failure.bat"
++    [System.IO.File]::WriteAllText(
++        $failureBatch,
++        "@echo off`r`nexit /b 23`r`n",
++        [System.Text.Encoding]::ASCII
++    )
++    $failureObserved = $false
++    try {
++        Invoke-BatchFile -Path $failureBatch
++    } catch {
++        if ($_.Exception.Message -notmatch "exited with code 23") {
++            throw
++        }
++        $failureObserved = $true
++    }
++    if (-not $failureObserved) {
++        throw "Invoke-BatchFile did not propagate a non-zero batch exit code."
++    }
++
++    Write-Host "EnsureMarketServer batch invocation verification passed."
++} finally {
++    $systemTemporaryRoot = [System.IO.Path]::GetFullPath(
++        [System.IO.Path]::GetTempPath()
++    ).TrimEnd("\", "/") + [System.IO.Path]::DirectorySeparatorChar
++    if (
++        $temporaryRoot.StartsWith(
++            $systemTemporaryRoot,
++            [System.StringComparison]::OrdinalIgnoreCase
++        ) -and
++        (Test-Path -LiteralPath $temporaryRoot -PathType Container)
++    ) {
++        $cleanupDeadline = [DateTime]::UtcNow.AddSeconds(2)
++        do {
++            try {
++                Remove-Item -LiteralPath $temporaryRoot -Recurse -Force
++                break
++            } catch {
++                if ([DateTime]::UtcNow -ge $cleanupDeadline) {
++                    throw
++                }
++                Start-Sleep -Milliseconds 100
++            }
++        } while (Test-Path -LiteralPath $temporaryRoot)
++    }
 +}
 diff --git a/tools/market-seed/src/main.rs b/tools/market-seed/src/main.rs
 index b695765e6f55c6dad5f8aef475811bd48bdd6758..9237a15f85a6da9f276c8160034957f3ef71e620 100644
