@@ -1,6 +1,6 @@
 {
     "schemaVersion":  1,
-    "release":  "v0.2.0",
+    "release":  "v0.2.1",
     "compatibility":  {
                           "product":  "EveJS",
                           "version":  "v0.12.3.1",
@@ -8,7 +8,7 @@
                           "archiveSha256":  "1DEB61A51F808D9F2B330214DA64EC297D9EE5F96EE4B8265692A65F35EEFC1E",
                           "note":  "Compatibility is defined by the archive checksum and touched-file hashes; no upstream source is redistributed here."
                       },
-    "fileCount":  197,
+    "fileCount":  199,
     "files":  [
                   {
                       "path":  "evejs.config.x-eve.json",
@@ -465,6 +465,12 @@
                       "sha256":  "9D7C2D21C5B35E5F42ED9D2B54C57B03B7AEC504BB8BE8A1DBCD3E8D9A89ACAD",
                       "size":  103164,
                       "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/gameStore/data/liveEventDefinitions/data.json",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
                   },
                   {
                       "path":  "server/src/gameStore/index.js",
@@ -1188,6 +1194,12 @@
                   },
                   {
                       "path":  "tools/ServerStack/TestLivingUniverseReady.ps1",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "tools/ServerStack/VerifyEnsureMarketServer.ps1",
                       "sha256":  null,
                       "size":  0,
                       "kind":  "added"

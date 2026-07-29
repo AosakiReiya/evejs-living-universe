@@ -9,7 +9,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $ReleaseName = 'X-Eve Living Universe'
-$ReleaseVersion = 'v0.2.0'
+$ReleaseVersion = 'v0.2.1'
 $BaselineVersion = 'v0.12.3.1'
 $ExpectedArchiveSha256 = '1DEB61A51F808D9F2B330214DA64EC297D9EE5F96EE4B8265692A65F35EEFC1E'
 $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
@@ -443,6 +443,41 @@ function Assert-InstalledFiles {
     }
 }
 
+function Assert-RuntimeStaticDataReferences {
+    param(
+        [string]$TargetRoot,
+        [hashtable]$InstalledMap
+    )
+
+    $pattern = [regex]::new(
+        '(?<relative>(?:\.\./)+gameStore/data/[A-Za-z0-9._-]+/data\.json)',
+        [System.Text.RegularExpressions.RegexOptions]::CultureInvariant
+    )
+    $targetPrefix = $TargetRoot.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
+    foreach ($path in ($InstalledMap.Keys | Sort-Object)) {
+        if (-not $path.EndsWith('.js', [System.StringComparison]::OrdinalIgnoreCase)) {
+            continue
+        }
+        $sourcePath = Resolve-TargetChild $TargetRoot $path
+        $sourceText = [System.IO.File]::ReadAllText($sourcePath)
+        foreach ($match in $pattern.Matches($sourceText)) {
+            $referencePath = [System.IO.Path]::GetFullPath(
+                (Join-Path (Split-Path -Parent $sourcePath) $match.Groups['relative'].Value)
+            )
+            if (-not $referencePath.StartsWith(
+                $targetPrefix,
+                [System.StringComparison]::OrdinalIgnoreCase
+            )) {
+                throw "Runtime static-data reference escapes EveJSPath: $path"
+            }
+            if (-not (Test-Path -LiteralPath $referencePath -PathType Leaf)) {
+                $missingPath = $referencePath.Substring($targetPrefix.Length).Replace('\', '/')
+                throw "Runtime static-data reference is missing after patch application: $path -> $missingPath"
+            }
+        }
+    }
+}
+
 function Copy-BaselineBackups {
     param(
         [string]$TargetRoot,
@@ -537,7 +572,7 @@ function Write-JsonAtomically {
 $installerRoot = Split-Path -Parent $PSCommandPath
 $releaseRoot = [System.IO.Path]::GetFullPath((Join-Path $installerRoot '..'))
 $patchDirectory = Join-Path $releaseRoot 'patches\v0.12.3.1'
-$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.2.0.patch'
+$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.2.1.patch'
 $baselineManifestPath = Join-Path $patchDirectory 'baseline-manifest.json'
 $installedManifestPath = Join-Path $patchDirectory 'installed-manifest.json'
 
@@ -630,6 +665,9 @@ try {
 
     Write-Step 'Verifying every installed file'
     Assert-InstalledFiles $targetRoot $installedMap
+
+    Write-Step 'Verifying runtime static-data references'
+    Assert-RuntimeStaticDataReferences $targetRoot $installedMap
 
     $stateFiles = @(
         foreach ($path in ($installedMap.Keys | Sort-Object)) {

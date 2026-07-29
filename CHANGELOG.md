@@ -2,6 +2,33 @@
 
 All notable public patch releases are recorded here.
 
+## 0.2.1 - 2026-07-29
+
+First-start and scheduler-capacity hotfix for the exact EveJS v0.12.3.1
+compatible baseline.
+
+### First startup
+
+- Prevents the market setup helper from waiting on detached descendants after
+  a successful seed or build command.
+- Includes the Live Events definition catalog required by the enabled public
+  profile and verifies patched runtime static-data references during build,
+  install, and installed-file verification.
+- Adds a first-run regression verifier for prompt nested batch-command return
+  and nonzero exit-code propagation.
+
+### X-Eve capacity
+
+- Raises the healthy X-Eve scheduler ceiling from 8 to 32 continuations per
+  pass while retaining the existing 2 ms time budget and adaptive tick-pressure
+  governor.
+- Adds a regression that drains a 24-event observation burst in one healthy
+  pass without weakening constrained, overloaded, shed, persistence, or
+  idempotency behavior.
+- Fixes the 72x failure mode where Living Economy observation work arrived
+  faster than the former hard ceiling could drain it, causing maintenance
+  backlog to grow past 10,000 despite healthy handler duration and tick p95.
+
 ## 0.2.0 - 2026-07-28
 
 First Living Universe release for the exact EveJS v0.12.3.1 compatible
