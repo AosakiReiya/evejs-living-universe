@@ -1,6 +1,6 @@
 # Configuration
 
-The v0.1.0 patch installs an X-Eve profile that is loaded automatically by the
+The v0.2.0 patch installs an X-Eve profile that is loaded automatically by the
 ordinary EveJS server. Starting `Play.bat` or `StartServer.bat` enables the
 Living Universe, economy, conflict, industrial crews, live events, family
 estate, and X-Eve with 5,000 persistent pilots. No X-Eve-specific launcher is
@@ -26,7 +26,7 @@ should never be committed to this patch repository.
 
 The installed profile uses these principal values:
 
-| JSON key | Source default | Installed v0.1.0 value |
+| JSON key | Source default | Installed v0.2.0 value |
 | --- | ---: | ---: |
 | `familyEstateEnabled` | `false` | `true` |
 | `livingUniverseEnabled` | `false` | `true` |
@@ -119,10 +119,39 @@ capacity promise for a particular host.
 | `livingEconomyMaxActiveIndustryJobs` | `320` | Global persistent NPC industry cap. |
 | `livingEconomyMaxProductionRunsPerPulse` | `24` | Maximum new industry jobs installed per pulse. |
 | `livingEconomyTelemetryIntervalSeconds` | `600` | Ten-minute economic snapshot interval. |
+| `livingEconomyMobilizationEnabled` | `true` | Scales replacement logistics and industry from measured backlog, age, and creation-to-fulfillment pressure. |
+| `livingEconomyMobilizationTargetBacklogPackages` | `30` | Backlog at or below which mobilization pressure is zero. |
+| `livingEconomyMobilizationFullBacklogPackages` | `120` | Backlog that contributes full package pressure. |
+| `livingEconomyMobilizationMaxLevel` | `1` | Operator ceiling for every mobilization ramp. |
+| `livingEconomyMobilizationWarTimeScaleFactor` | `0.1` | Full-mobilization time factor for demand-driven manufacturing and its blueprint science. |
+| `livingEconomyProcurementWarPremiumMaxPercent` | `150` | Maximum anchor-price percentage NPC buyers offer for replacement-input shortages. |
+| `livingEconomyNpcRefineryEfficiencyPercent` | `72` | NPC mineral yield, frozen on each mining deposit for replay safety. |
+| `livingEconomyFactionSmugglerDeliveryMinutes` | `30` | Wall-clock pirate-hull fallback delivery window. |
 
-The default production time scale is `1`, meaning normal modeled blueprint
-time. `livingEconomyIndustryTimeScale: 0.1` is a 10x development accelerator;
-use it for short tests, not balance or production-play conclusions.
+The normal production time scale remains `1`. Mobilization accelerates only
+replacement-driven work and returns toward peacetime as pressure falls; routine
+stock production retains its ordinary pacing. `livingEconomyIndustryTimeScale`
+is still a global development control and should remain `1` for normal play.
+
+Player sales that match a Living Economy procurement order settle through the
+same replay-safe stock path used by NPC supply. The item enters station stock,
+the shortage is reduced, and the seller receives the matched payment. War
+premium bids are capped below a same-station sell order so the mechanic cannot
+be used for immediate local arbitrage.
+
+## Faction hostility
+
+| JSON key | Default | Meaning |
+| --- | ---: | --- |
+| `livingHostilityEnabled` | `true` | Enables per-player aggression and standing-based target admission for living factions. |
+| `livingHostilityMinutes` | `15` | Wall-clock hostility after attacking a living faction; repeat aggression refreshes it. |
+| `livingHostilityStandingFloor` | `-5` | Effective faction standing at or below which living forces treat that player as shoot-on-sight. |
+| `factionStandingGainOnKillEnabled` | `true` | Allows small standing gains with authored enemies of a destroyed faction. |
+
+Hostility is scoped to the attacking player. Industrial crews and simulated
+NPC pilots are not mistaken for player aggressors, and kill-credit records are
+short-lived, restart-safe understatements rather than a source of duplicate
+standing changes.
 
 ## Roaming conflict controls
 

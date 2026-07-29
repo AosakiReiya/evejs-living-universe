@@ -11,7 +11,7 @@ if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
   $RepositoryRoot = Join-Path $PSScriptRoot '..'
 }
 
-$ExpectedBaselineArchiveSha256 = '81E2B48DE1E55D8FAD413137F83FF26C7FEB4FFA943825093FFC1BB17468D27E'
+$ExpectedBaselineArchiveSha256 = '1DEB61A51F808D9F2B330214DA64EC297D9EE5F96EE4B8265692A65F35EEFC1E'
 $Failures = [System.Collections.Generic.List[string]]::new()
 
 function Add-AuditFailure {
@@ -449,7 +449,7 @@ $patchKinds = @{}
 if ($patchFiles.Count -eq 1) {
   $canonicalPatch = $patchFiles[0]
   $canonicalPatchPath = Convert-ToRepositoryPath -FullName $canonicalPatch.FullName
-  if ($canonicalPatchPath -cnotmatch '^patches/v\d+\.\d+\.\d+/x-eve-living-universe-v\d+\.\d+\.\d+(?:-[A-Za-z0-9][A-Za-z0-9.-]*)?\.patch$') {
+  if ($canonicalPatchPath -cne 'patches/v0.12.3.1/x-eve-living-universe-v0.2.0.patch') {
     Add-AuditFailure "Canonical patch has an unexpected release path or name: $canonicalPatchPath"
   }
 
@@ -773,14 +773,14 @@ if ($manifestByName.ContainsKey('baseline-manifest.json')) {
         Add-AuditFailure "baseline-manifest.json compatibility is missing $requiredCompatibilityProperty."
       }
     }
-    if ($compatibilityProperties -contains 'version' -and [string]$baselineData.compatibility.version -cne 'v0.12.3') {
-      Add-AuditFailure 'baseline-manifest.json compatibility.version is not v0.12.3.'
+    if ($compatibilityProperties -contains 'version' -and [string]$baselineData.compatibility.version -cne 'v0.12.3.1') {
+      Add-AuditFailure 'baseline-manifest.json compatibility.version is not v0.12.3.1.'
     }
     if (
       $compatibilityProperties -contains 'archiveSha256' -and
       [string]$baselineData.compatibility.archiveSha256.ToUpperInvariant() -cne $ExpectedBaselineArchiveSha256
     ) {
-      Add-AuditFailure 'baseline-manifest.json compatibility.archiveSha256 does not identify the approved EveJS v0.12.3 source archive.'
+      Add-AuditFailure 'baseline-manifest.json compatibility.archiveSha256 does not identify the approved EveJS v0.12.3.1 source archive.'
     }
   }
 }

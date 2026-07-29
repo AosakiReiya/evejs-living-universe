@@ -9,7 +9,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$ExpectedArchiveSha256 = '81E2B48DE1E55D8FAD413137F83FF26C7FEB4FFA943825093FFC1BB17468D27E'
+$ExpectedArchiveSha256 = '1DEB61A51F808D9F2B330214DA64EC297D9EE5F96EE4B8265692A65F35EEFC1E'
 
 function Get-CanonicalTarget {
     param([string]$Path)
@@ -114,7 +114,7 @@ function Test-Files {
 
 function Invoke-PatchCheck {
     param([string]$Root, [string]$PatchPath, [switch]$Reverse)
-    $arguments = @('-C', $Root, 'apply', '--check', '--binary', '--whitespace=nowarn')
+    $arguments = @('-c', 'core.autocrlf=true', '-C', $Root, 'apply', '--check', '--binary', '--whitespace=nowarn')
     if ($Reverse) { $arguments += '--reverse' }
     $arguments += @('--', $PatchPath)
     $output = @(& git @arguments 2>&1)
@@ -142,6 +142,12 @@ function Invoke-VerificationTests {
         'verifyFamilyEstateProjects.js',
         'verifyLivingEconomyMarketTopology.js',
         'verifyLivingEconomyAutomaticRegionalStock.js',
+        'verifyLivingEconomyMobilization.js',
+        'verifyLivingFactionHostility.js',
+        'verifyManagedIndustrialCrewDefense.js',
+        'verifyCorporationSyntheticEmployeeProjection.js',
+        'verifyIndustrialCrewPresenceLifecycle.js',
+        'verifySyntheticChatPresence.js',
         'verifyXEveCore.js',
         'verifyXEveEventCircuit.js'
     )
@@ -176,13 +182,13 @@ if ($null -eq (Get-Command git -ErrorAction SilentlyContinue)) {
 
 $target = Get-CanonicalTarget $EveJSPath
 $releaseRoot = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $PSCommandPath) '..'))
-$patchDirectory = Join-Path $releaseRoot 'patches\v0.12.3'
-$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.1.0.patch'
+$patchDirectory = Join-Path $releaseRoot 'patches\v0.12.3.1'
+$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.2.0.patch'
 $baselineManifest = Read-Json (Join-Path $patchDirectory 'baseline-manifest.json') 'Baseline manifest'
 $installedManifest = Read-Json (Join-Path $patchDirectory 'installed-manifest.json') 'Installed manifest'
 
 if ([string]$baselineManifest.compatibility.archiveSha256 -ne $ExpectedArchiveSha256) {
-    throw 'Baseline manifest has the wrong v0.12.3 archive checksum.'
+    throw 'Baseline manifest has the wrong v0.12.3.1 archive checksum.'
 }
 if ((Get-Sha256 $patchPath) -ne ([string]$installedManifest.patchSha256).ToUpperInvariant()) {
     throw 'Patch checksum does not match installed-manifest.json.'
@@ -205,5 +211,5 @@ if (Test-Path -LiteralPath $statePath -PathType Leaf) {
     if ($RunTests) { throw '-RunTests requires an installed patch and install state.' }
     Test-Files $target $baselineMap
     Invoke-PatchCheck $target $patchPath
-    Write-Host '[X-Eve] Clean v0.12.3 baseline integrity and apply checks passed.'
+    Write-Host '[X-Eve] Clean v0.12.3.1 baseline integrity and apply checks passed.'
 }
