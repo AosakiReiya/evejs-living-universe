@@ -81,3 +81,9 @@
 **/id_ecdsa
 **/id_ed25519
 **/authorized_keys
+
+# Docker-overlay files are part of the patch infrastructure
+!/patches/docker-overlay/docker/
+!/patches/docker-overlay/server/
+!/patches/docker-overlay/server/src/
+!/patches/docker-overlay/server/src/gameStore/
