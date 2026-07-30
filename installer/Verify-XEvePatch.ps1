@@ -226,8 +226,8 @@ if ($null -eq (Get-Command git -ErrorAction SilentlyContinue)) {
 
 $target = Get-CanonicalTarget $EveJSPath
 $releaseRoot = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $PSCommandPath) '..'))
-$patchDirectory = Join-Path $releaseRoot 'patches\v0.12.3.1'
-$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.2.2.patch'
+$patchDirectory = Join-Path $releaseRoot 'patches'
+$patchPath = Join-Path $patchDirectory 'x-eve-living-universe.patch'
 $baselineManifest = Read-Json (Join-Path $patchDirectory 'baseline-manifest.json') 'Baseline manifest'
 $installedManifest = Read-Json (Join-Path $patchDirectory 'installed-manifest.json') 'Installed manifest'
 

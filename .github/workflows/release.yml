@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    tags: 'v*'
+
+jobs:
+  verify-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify release integrity
+        run: |
+          echo "=== Checking patch file ==="
+          ls -lh patches/x-eve-living-universe.patch || exit 1
+
+          echo "=== Checking manifests ==="
+          jq . patches/baseline-manifest.json > /dev/null || exit 1
+          jq . patches/installed-manifest.json > /dev/null || exit 1
+
+          echo "=== Verifying patch SHA256 ==="
+          PATCH_SHA=$(sha256sum patches/x-eve-living-universe.patch | cut -d' ' -f1 | tr '[:lower:]' '[:upper:]')
+          MANIFEST_SHA=$(jq -r '.patchSha256' patches/installed-manifest.json)
+          if [ "$PATCH_SHA" != "$MANIFEST_SHA" ]; then
+            echo "ERROR: Patch SHA256 mismatch"
+            echo "  File:      $PATCH_SHA"
+            echo "  Manifest:  $MANIFEST_SHA"
+            exit 1
+          fi
+          echo "Patch SHA256: $PATCH_SHA (matches manifest)"
+
+      - name: Build release archive
+        id: build
+        run: |
+          PLUGIN_VER=$(jq -r '.pluginVersion' patches/baseline-manifest.json)
+          EVEJS_VER=$(jq -r '.compatibility.version' patches/baseline-manifest.json)
+          echo "evejs_ver=${EVEJS_VER}" >> $GITHUB_OUTPUT
+          ZIP_NAME="X-Eve-Living-Universe-${PLUGIN_VER}-EVEJS-${EVEJS_VER}"
+          mkdir -p "${ZIP_NAME}/patches"
+          cp -r patches/* "${ZIP_NAME}/patches/"
+          cp -r installer "${ZIP_NAME}/"
+          cp -r docs "${ZIP_NAME}/" 2>/dev/null || true
+          cp README.md LICENSE "${ZIP_NAME}/" 2>/dev/null || true
+          cd "${ZIP_NAME}"
+          find patches/ -maxdepth 1 -type f -exec sha256sum {} \; > patches/SHA256SUMS
+          cd ..
+          zip -r "${ZIP_NAME}.zip" "${ZIP_NAME}/"
+
+      - name: Extract changelog section
+        run: |
+          awk -v tag="${GITHUB_REF_NAME}" '
+            $0 ~ "^## \\[" tag "\\]" {flag=1; next}
+            $0 ~ "^## \\[" && flag {exit}
+            flag
+          ' CHANGELOG.md > changelog_section.md
+
+      - name: Create Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "X-Eve Living Universe ${{ github.ref_name }} for EVEJS ${{ steps.build.outputs.evejs_ver }}" \
+            --notes-file changelog_section.md \
+            --generate-notes \
+            X-Eve-Living-Universe-*.zip

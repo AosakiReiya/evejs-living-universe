@@ -1,0 +1,1214 @@
+{
+    "schemaVersion":  1,
+    "pluginVersion":  "v0.2.2",
+    "compatibility":  {
+                          "product":  "EveJS",
+                          "version":  "v0.12.3.1",
+                          "archiveName":  "EveJS-v0.12.3.1.zip",
+                          "archiveSha256":  "1DEB61A51F808D9F2B330214DA64EC297D9EE5F96EE4B8265692A65F35EEFC1E",
+                          "note":  "Compatibility is defined by the archive checksum and touched-file hashes; no upstream source is redistributed here."
+                      },
+    "fileCount":  200,
+    "files":  [
+                  {
+                      "path":  "evejs.config.x-eve.json",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "externalservices/market-server/crates/market-common/src/lib.rs",
+                      "sha256":  "30FFDBCCC2AE0BC28DBA748AA26DF9DF3779F4EA7CDCA79E0A0E0B86ECAA43AC",
+                      "size":  18811,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "externalservices/market-server/src/rpc.rs",
+                      "sha256":  "9FF5A3ACB67073D82D61A60D9689CB9D6A48C0057621317F0F9C21B7B6BD55C9",
+                      "size":  11343,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "externalservices/market-server/src/state.rs",
+                      "sha256":  "08168A78EF0C5DD770DF824934A83E473A369937AC792431EDC90703EE9EA12C",
+                      "size":  126707,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "Play.bat",
+                      "sha256":  "CC782CB020C48CF8C91BAB2D37A63A6B2412075E7CBAA9E959276AA23624D128",
+                      "size":  25823,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "README.md",
+                      "sha256":  "C4E0A89876FBA84E8626C486BB009E48388614CEF6E8FA362143E5F280439BB9",
+                      "size":  20279,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/index.js",
+                      "sha256":  "7141E35A4517CF5F939E4531DF5658BCB445ABA4A9A930FDD1D25A7BE51E708E",
+                      "size":  9223,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/scripts/analyzeDestructionReplacementStress.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/auditLivingEconomyTransit.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/bootstrapLivingEconomyMarket.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/captureXEveStressSample.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/inspectLivingEconomy.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/inspectLivingEconomyRepositions.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/migrateIndustrialHirelingsToCrews.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/recoverLivingEconomyIndustryJobs.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/repairLivingEconomyIndustryReplay.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/reportLivingEconomyTelemetry.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/syncLivingEconomyMarketTopology.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/syncLivingUniversePortraits.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyAmbientTrafficPilot.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyCorporationSyntheticEmployeeProjection.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyDeadlineQueue.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyDestructionReplacementTelemetry.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyFamilyEstate.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyFamilyEstateClaim.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyFamilyEstateLogistics.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyFamilyEstateProjects.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyFamilyEstatePrologue.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyFamilyEstateWormholeSignatures.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyIndustrialCrewPresenceLifecycle.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyIndustrialHirelingBookmarks.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyIndustrialHirelingContracts.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyIndustrialMiningCrewPartialRepair.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLiveEventOperator.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLiveEventsCore.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingConflictEconomy.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingConflictIncidents.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingConflictMaterialization.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomy.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyAdjustmentReplay.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyAutomaticRegionalStock.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyCampaignAdjustmentReplay.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyHaulerRepositioning.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyIncrementalHullDemand.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyIndustryReplay.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyMarketTopology.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyMobilization.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyPriorityDemand.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyProductionInputFocus.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyRegionalCache.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyReplacementInputReservation.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyReplacementLogistics.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyStaleFreightInvalidation.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyStaleFreightRecovery.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingEconomyTelemetry.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingFactionHostility.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingReplacementCoverage.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingRoamingIntegration.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingRoamingKernel.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingUniverseIncrementalPersistence.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingUniversePhysicalBehavior.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingUniversePilots.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingUniversePilotSyncBudget.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingUniversePopulation.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingUniversePortraits.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingUniverseReplacementSchedulerPriority.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingUniverseStressAcceleration.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyLivingUniverseTransitTiming.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyManagedIndustrialCrewDefense.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifySyntheticChatPresence.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyXEveCore.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/scripts/verifyXEveEventCircuit.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/_secondary/chat/chatRuntime.js",
+                      "sha256":  "3D64B28D63D9AF924BB6ECE95C92A7F40E52B5EFA75FBA8ACE87EF873A6AB54B",
+                      "size":  64008,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/_secondary/express/gatewayServices/webChatGatewayService.js",
+                      "sha256":  "2BACD869C0D42A4811F6B2AE64C141AF4118261426C65B18762F411746AB002A",
+                      "size":  12141,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/_secondary/image/imageRequestResolver.js",
+                      "sha256":  "56CC79EE3563DE82784C028B0D2833A088E0D654183ED576887E3A63632FE1D7",
+                      "size":  5970,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/config/index.js",
+                      "sha256":  "9D7C2D21C5B35E5F42ED9D2B54C57B03B7AEC504BB8BE8A1DBCD3E8D9A89ACAD",
+                      "size":  103164,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/gameStore/data/liveEventDefinitions/data.json",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/gameStore/index.js",
+                      "sha256":  "B080F379566A52205773AD3C3F110A0252C0A690513544F5A7A2E381C24C854E",
+                      "size":  47258,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/gameStore/sqliteStore.js",
+                      "sha256":  "6DA415252BFB154DFCDD40F151BDFBACEFF5411B531A608085D5CB70FE9DF227",
+                      "size":  26239,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/gameStore/tableOwnership.js",
+                      "sha256":  "C8BDFE7A32CF69D4DF39D028B52CCC9BC33AC0515FB28E98059B9DAD9A54B047",
+                      "size":  14928,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/gameStore/tableRepository.js",
+                      "sha256":  "A43C521D70A8A017D135DB5A085325CE1761685609C6B59D318BCAD3793F7862",
+                      "size":  6950,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/network/tcp/index.js",
+                      "sha256":  "9A6B9386F6A789E80A4F2725DAC7FFB7D22A024FBCD875AE3B6502A4C6B862B6",
+                      "size":  20194,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/bounty/bountyProxyService.js",
+                      "sha256":  "B8D33721709E3ACEA5666233EF468A3D65B6F52837453FCC5D86409943046246",
+                      "size":  21901,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/character/characterState.js",
+                      "sha256":  "1B817F186E55F65AAAAF6D5BBBC6D2509760A8711B9787648C9FFCD4FFD02FCF",
+                      "size":  147031,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/character/charMgrService.js",
+                      "sha256":  "BCFF7CE0D28854E6ACDD8C66C41D34A523F88EF0DE2ACCD98BF8AB4A3F0E02A8",
+                      "size":  35610,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/character/factionHostilityRuntime.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/character/factionKillStandingRuntime.js",
+                      "sha256":  "1918A645DF9DBF7083A5BADA6C89CCD27D38E76A1279AF06BA84FEEC3CFBD7C0",
+                      "size":  5429,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/chat/chatCommands.js",
+                      "sha256":  "474E023DBE62AA6925F9161FD8310FDEAF01B88A16423562B30326DBF8EB36B2",
+                      "size":  354010,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/chat/sessionRegistry.js",
+                      "sha256":  "70AE15EE49507BD2034701517AFA01A4271F6ED608176BC128E598F9BB797C0B",
+                      "size":  6333,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/chat/wormhole/index.js",
+                      "sha256":  "C6C781C1DF361164BE59008DBBBE00E3CE6FEC6C0DA1B0AE1BA95467317529F2",
+                      "size":  543,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/chat/wormhole/wormholeCommandHandlers.js",
+                      "sha256":  "49F87A66DBDB24BCD16EBA7470CBC3AC4BD5C9D715A28D449116536A1134FF28",
+                      "size":  13675,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/chat/xmppStubServer.js",
+                      "sha256":  "56A6C2DC10CFAA3D0E7958BC944A652FF6B98BE7515E1A1707B72EBE005D4BA1",
+                      "size":  104679,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/config/configService.js",
+                      "sha256":  "D18A330D8146BDEE68F73818F66AF455FA0A3A149BC1A3E14D71D74C76BF5964",
+                      "size":  19134,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/corporation/corpMemberQueryState.js",
+                      "sha256":  "9A73152DA2873EAA9580AD88ED42A070E3B7543FE07AC567BF93F82D44BF5807",
+                      "size":  11991,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/corporation/corporationRuntimeState.js",
+                      "sha256":  "C0FEA61DDBFA2EEF0F14D3FA30CD5D56354374E5030FAE120FE7AA1554E66F7D",
+                      "size":  53220,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/corporation/corpReadOnlyEmployeeProjection.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/corporation/corpRegistryRuntime.js",
+                      "sha256":  "8F485709931A3B41CFC99038B43D91103163E2A36E41F1848638C45A63B512D4",
+                      "size":  100376,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/corporation/corpWalletState.js",
+                      "sha256":  "3484CB038240F862D734DD45361504979F18DD118112071FF780DEA1685E1641",
+                      "size":  15527,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/drone/droneDogma.js",
+                      "sha256":  "B2EF4A0A1B09ACA2D9BE557026C298B3DC9860BD673ABD73D2423899F0CCAA34",
+                      "size":  34107,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/drone/droneRuntime.js",
+                      "sha256":  "282A3803E4522980F5FDF1857E6937D357021571576F4756373E3D1D927F82B0",
+                      "size":  154999,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/estate/familyEstateClaimState.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/estate/familyEstateProfile.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/estate/familyEstateProjectsRuntime.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/estate/familyEstateProjectState.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/estate/familyEstatePrologueRuntime.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/estate/familyEstatePrologueState.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/estate/familyEstateRuntime.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/exploration/signatures/providers/wormholeSignatureProvider.js",
+                      "sha256":  "E1604074BCD2D6BF8962DE67523D6A0D5C6CC758CCFD6950F9E1624F451E199C",
+                      "size":  6305,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/exploration/wormholes/wormholeMgrService.js",
+                      "sha256":  "95B13013CB13D737CC9265D1B69A084E734079F1728E24E3ED401017627880C3",
+                      "size":  9273,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/exploration/wormholes/wormholeRuntime.js",
+                      "sha256":  "2FAEEF6EDD5C0479D1E395D0F66B945C62D0806FBB1714FC0EBB3B60ADEE43F0",
+                      "size":  75008,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/exploration/wormholes/wormholeRuntimeState.js",
+                      "sha256":  "E37A9F8C5FE5141CCC76F8DB38AE63B7A516C7FC6457A2364EEB870B0628101C",
+                      "size":  11991,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/industrialHirelings/industrialHirelingBookmarkLifecycle.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/industrialHirelings/industrialHirelingBookmarks.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/industrialHirelings/industrialHirelingCargoCustody.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/industrialHirelings/industrialHirelingCommand.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/industrialHirelings/industrialHirelingContracts.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/industrialHirelings/industrialHirelingIdentity.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/industrialHirelings/industrialHirelingNavigation.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/industrialHirelings/industrialHirelingRuntime.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/industrialHirelings/industrialHirelingSceneLifecycle.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/industrialHirelings/industrialHirelingScheduler.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/industrialHirelings/industrialHirelingSites.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/industrialHirelings/industrialHirelingState.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/industrialHirelings/industrialMiningCrewCatalog.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/market/marketDaemonClient.js",
+                      "sha256":  "1716976D59EA33535830AFE38ED264DC727F6414CBAE796CB7B530651A30CAF4",
+                      "size":  9776,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/market/marketProxyService.js",
+                      "sha256":  "A2E2B2D9ACADA1EAA07F2C3B7DBC8A7A044AC538BBD0899E49C30A9E1AAF67DE",
+                      "size":  135367,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/market/marketTopology.js",
+                      "sha256":  "68444D35FF29BBC904699DEB0958A49B43BF92D642232A194ABD778859376FE5",
+                      "size":  8010,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/mining/miningNpcOperations.js",
+                      "sha256":  "C4B8C0DB86C9610480A00880D3C5E51B466A1E2F713BE7B773EDC809AA14E078",
+                      "size":  103073,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/mining/miningRuntimeState.js",
+                      "sha256":  "16C4256790DB93083277855DF9BA25D3F5BD76CA98DBABFE05D2F65B35B7A105",
+                      "size":  53910,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/mining/virtualMiningTransactions.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/ship/devCommandShipRuntime.js",
+                      "sha256":  "BD60AC9019E3F55118D4F73A289365E57B8D8FA4195A945811B07318A8A1E261",
+                      "size":  40571,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/structure/structureState.js",
+                      "sha256":  "9182361430FDB4CA7CA04A639F4357A55C78FB5133C4E99801EA47C337F57CB2",
+                      "size":  125744,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/services/xEve/xEveEventBridge.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/xEve/xEveLedger.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/xEve/xEveLoadGovernor.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/xEve/xEveObservation.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/xEve/xEveRuntime.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/services/xEve/xEveState.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/asteroids/asteroidService.js",
+                      "sha256":  "644DDDC64873803F890A3E17DAB9B8D2777E95EB16891383D0C5459798FF13EA",
+                      "size":  37378,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/combat/killmailTracker.js",
+                      "sha256":  "C125B7D9BAD8A8B4BD25889F7A892708CB61416F833C13A701B0A617AA2297A5",
+                      "size":  31815,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/combat/weaponDogma.js",
+                      "sha256":  "E1E2DF78A6BA9DCFBDA6A8017431D4650BE07A11041F051AC089231B934C5DD5",
+                      "size":  50444,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/destiny/index.js",
+                      "sha256":  "FEB5A5E631F6618491B25937F42928AF5CBD014D2F121440FA89D15739D04796",
+                      "size":  28014,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/destiny/presentation/specialFxPayloads.js",
+                      "sha256":  "14D9CA3C88826BBD770A8A6497B6F370E7BCFE33D56C45A1E90C485E8E36703C",
+                      "size":  10285,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/liveEvents/deadlineQueue.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/liveEvents/industrialMiningEventHandler.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/liveEvents/liveEventCatalog.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/liveEvents/liveEventOperator.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/liveEvents/liveEventRuntime.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/liveEvents/liveEventState.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/modules/salvagerRuntime.js",
+                      "sha256":  "8395A73F32A7D4881B3C91821C9082F30A768B21037D3CE5E9F50D8586F80A0C",
+                      "size":  43596,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/ambientTrafficNpcCatalog.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/ambientTrafficRuntime.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/ambientTrafficState.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingConflictCampaignCatalog.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingConflictRuntime.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingEconomyCatalog.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingEconomyDemandCoverage.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingEconomyIndustrialWorkforce.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingEconomyIndustry.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingEconomyMobilization.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingEconomyProcurement.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingEconomyRoutePlanner.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingEconomyRuntime.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingEconomySalvage.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingEconomyState.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingEconomyTelemetry.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingEconomyWorkBudget.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingKillCreditLedger.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingRoamingKernel.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingUniverseAffiliations.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingUniversePilotDirectory.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingUniverseRuntime.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/ambientTraffic/livingUniverseState.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/empireSecurity/empireSecurityNpcCatalog.js",
+                      "sha256":  "25A429E0C61D3E37A59A5A110297875A6DCE90D12728A8E42D863D10B0413F80",
+                      "size":  3863,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/npc/governance/industrialCrewDoctrineCatalog.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/governance/npcDoctrineGovernance.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/governance/regionalTrafficDoctrineCatalog.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/governance/trafficDoctrineCatalog.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/nativeNpcService.js",
+                      "sha256":  "0EC5ED6C53EE39CA02DC8D2ED14DE8E1FEA640DD15DF1018A768A8F8B7728DAE",
+                      "size":  59743,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/npc/nativeNpcStore.js",
+                      "sha256":  "86377C735899BD33164CC59100853C4A862C1207DC96CB0FC2BF07C089B491BD",
+                      "size":  26581,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/npc/npcBehaviorLoop.js",
+                      "sha256":  "F8307C4B4A7F2B47B88ED0E2BE9B55C35314AAB94A85547F6A24FAC8773681B7",
+                      "size":  147959,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/npc/npcCapabilityResolver.js",
+                      "sha256":  "1740173FF324A78C709C72CEE317F50121DCBB2036F9626ED84F107563517169",
+                      "size":  2720,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/npc/npcCombatDormancy.js",
+                      "sha256":  "6677F6F4EA27D7B3DA657F5555061897DD386988A7A53C328C0854B588277F97",
+                      "size":  11519,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/npc/npcData.js",
+                      "sha256":  "30957F7CBC0ECD46D768CEC0060F5A744582C750179912676FBED056594595AC",
+                      "size":  15247,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/npc/npcEntityEwarCatalog.js",
+                      "sha256":  "8F9312FC4FEEA85D78CB76EE9FA88441D01152491BC10798B59C0D42DF93DD26",
+                      "size":  6591,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/npc/npcEquipment.js",
+                      "sha256":  "9A00E28DEEFAE271AB46E91C050EED018BCCF7ACB3177358C361118B6C1A65F2",
+                      "size":  41207,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/npc/npcPhysicalBudget.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/npc/npcService.js",
+                      "sha256":  "A5A3F124D407E40EB841657C6467F92F0BC64E6CBBBF46947645B7B4F6CDDFBE",
+                      "size":  59624,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/runtime.js",
+                      "sha256":  "5DA55FE6D5A7BDDF0E43169D81DE6AD205586FE0BC2A77EBCA3D4899E801E4CD",
+                      "size":  1432283,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/runtimePerformanceTelemetry.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "server/src/space/transitions.js",
+                      "sha256":  "46411FEC4846E271C1161675079959C01A12E8F500938A91D8E0ECC19B110CAE",
+                      "size":  141154,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/src/space/worldData.js",
+                      "sha256":  "AB78A01D2C3A0DB24E5F090620798DF3A1F006AC50E7C8C9A5A23C1BE89319C5",
+                      "size":  7078,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "server/tests/industrialHirelingNavigation.test.js",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "StartMarketServer.bat",
+                      "sha256":  "AD7283A3ECC302F2BE3890AAABACADD59DF3059B22CEBC733B868D3AD75F7E62",
+                      "size":  9280,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "StartServer.bat",
+                      "sha256":  "EFC2291B11F54F95DA1CAE46D87D7AA6529824E2DAAAAF9A4293CBE1F85895EA",
+                      "size":  7899,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "tools/market-seed/src/main.rs",
+                      "sha256":  "1FF2894A4D60A5C4E72D2D3EAC44F1E4FA065005C930FE31379C7EE2B54BA8C9",
+                      "size":  67402,
+                      "kind":  "modified"
+                  },
+                  {
+                      "path":  "tools/ServerStack/EnsureMarketServer.ps1",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "tools/ServerStack/TestLivingUniverseReady.ps1",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "tools/ServerStack/VerifyEnsureMarketServer.ps1",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  },
+                  {
+                      "path":  "tools/ServerStack/VerifyPlayServerAvailability.ps1",
+                      "sha256":  null,
+                      "size":  0,
+                      "kind":  "added"
+                  }
+              ]
+}

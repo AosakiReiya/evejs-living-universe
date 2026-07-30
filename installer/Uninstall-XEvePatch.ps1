@@ -12,6 +12,7 @@ $ReleaseName = 'X-Eve Living Universe'
 $ReleaseVersion = 'v0.2.2'
 $BaselineVersion = 'v0.12.3.1'
 $ExpectedArchiveSha256 = '1DEB61A51F808D9F2B330214DA64EC297D9EE5F96EE4B8265692A65F35EEFC1E'
+$dockerOverlayFiles = @('.dockerignore', 'docker/entrypoint.sh', 'server/src/gameStore/sqliteStore.js')
 
 function Write-Step {
     param([string]$Message)
@@ -411,6 +412,40 @@ function Apply-Uninstall {
     }
 }
 
+function Restore-DockerOverlayOriginals {
+    param(
+        [string]$TargetRoot,
+        [string]$BackupRoot,
+        [object]$InstallState
+    )
+    $dockerOverlay = Get-ObjectProperty $InstallState @('dockerOverlay')
+    if ($null -eq $dockerOverlay -or -not $dockerOverlay.enabled) {
+        return
+    }
+    $overlayBackupRoot = Join-Path $BackupRoot 'docker-overlay'
+    if (-not (Test-Path -LiteralPath $overlayBackupRoot -PathType Container)) {
+        Write-Warning 'Docker overlay backup directory not found; skipping Docker file restoration.'
+        return
+    }
+    $overlayFiles = @($dockerOverlay.files)
+    foreach ($entry in $overlayFiles) {
+        $relativePath = $entry.path
+        $backupPath = Join-Path $overlayBackupRoot $relativePath
+        $targetPath = Join-Path $TargetRoot $relativePath
+        if (Test-Path -LiteralPath $backupPath -PathType Leaf) {
+            $parent = Split-Path -Parent $targetPath
+            if (-not (Test-Path -LiteralPath $parent -PathType Container)) {
+                [System.IO.Directory]::CreateDirectory($parent) | Out-Null
+            }
+            [System.IO.File]::Copy($backupPath, $targetPath, $true)
+            Write-Step "Restored original $relativePath"
+        }
+        else {
+            Write-Warning "Docker overlay backup for $relativePath is missing; skipping."
+        }
+    }
+}
+
 function Remove-StagingDirectory {
     param(
         [string]$InstallRoot,
@@ -429,8 +464,8 @@ function Remove-StagingDirectory {
 
 $installerRoot = Split-Path -Parent $PSCommandPath
 $releaseRoot = [System.IO.Path]::GetFullPath((Join-Path $installerRoot '..'))
-$patchDirectory = Join-Path $releaseRoot 'patches\v0.12.3.1'
-$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.2.2.patch'
+$patchDirectory = Join-Path $releaseRoot 'patches'
+$patchPath = Join-Path $patchDirectory 'x-eve-living-universe.patch'
 $baselineManifestPath = Join-Path $patchDirectory 'baseline-manifest.json'
 $installedManifestPath = Join-Path $patchDirectory 'installed-manifest.json'
 
@@ -460,7 +495,8 @@ $installStatePath = Join-Path $installRoot 'install.json'
 $lockPath = Join-Path $installRoot 'install.lock'
 Assert-NoReparsePoint $targetRoot $installRoot
 $installState = Read-JsonFile $installStatePath 'Local X-Eve install state'
-if ([string](Get-ObjectProperty $installState @('release')) -ne $ReleaseVersion -or
+$stateVersion = [string](Get-ObjectProperty $installState @('pluginVersion', 'release'))
+if ($stateVersion -ne $ReleaseVersion -or
     [string](Get-ObjectProperty $installState @('baseline')) -ne $BaselineVersion) {
     throw 'Local install state belongs to a different X-Eve release or EveJS baseline.'
 }
@@ -511,6 +547,24 @@ try {
     Apply-Uninstall $targetRoot $backupRoot $baselineMap
     Assert-BaselineFiles $targetRoot $baselineMap
 
+    Write-Step 'Backing up current Docker deployment files for rollback safety'
+    $dockerOverlay = Get-ObjectProperty $installState @('dockerOverlay')
+    if ($null -ne $dockerOverlay -and $dockerOverlay.enabled) {
+        $dockerStagingRoot = Join-Path $stagingRoot 'docker-overlay'
+        foreach ($entry in @($dockerOverlay.files)) {
+            $relativePath = $entry.path
+            $sourcePath = Resolve-ChildPath $targetRoot $relativePath
+            if (Test-Path -LiteralPath $sourcePath -PathType Leaf) {
+                $stagingPath = Resolve-ChildPath $dockerStagingRoot $relativePath
+                [System.IO.Directory]::CreateDirectory((Split-Path -Parent $stagingPath)) | Out-Null
+                [System.IO.File]::Copy($sourcePath, $stagingPath, $false)
+            }
+        }
+    }
+
+    Write-Step 'Restoring Docker deployment files to originals'
+    Restore-DockerOverlayOriginals $targetRoot $backupRoot $installState
+
     [System.IO.File]::Delete($installStatePath)
     $uninstallCommitted = $true
     Write-Step "$ReleaseName $ReleaseVersion was uninstalled successfully."
@@ -523,6 +577,21 @@ catch {
         try {
             Write-Warning 'Uninstall failed; restoring the verified patched files from temporary staging.'
             Restore-InstalledStaging $targetRoot $stagingRoot $installedMap
+            $dockerStagingRoot = Join-Path $stagingRoot 'docker-overlay'
+            if (Test-Path -LiteralPath $dockerStagingRoot -PathType Container) {
+                $dockerOverlay = Get-ObjectProperty $installState @('dockerOverlay')
+                if ($null -ne $dockerOverlay) {
+                    foreach ($entry in @($dockerOverlay.files)) {
+                        $relativePath = $entry.path
+                        $stagingPath = Resolve-ChildPath $dockerStagingRoot $relativePath
+                        if (Test-Path -LiteralPath $stagingPath -PathType Leaf) {
+                            $targetPath = Resolve-ChildPath $targetRoot $relativePath
+                            [System.IO.Directory]::CreateDirectory((Split-Path -Parent $targetPath)) | Out-Null
+                            [System.IO.File]::Copy($stagingPath, $targetPath, $true)
+                        }
+                    }
+                }
+            }
             Write-Step 'Uninstall rollback completed successfully.'
         }
         catch {

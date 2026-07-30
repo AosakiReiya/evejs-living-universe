@@ -1,22 +1,12 @@
 # X-Eve Living Universe
 
-X-Eve Living Universe is an independent source patch for a compatible v0.12.3.1
-server baseline. It adds a persistent virtual NPC population, regional
-economic activity, materialized traffic around players, conflict, industry,
-logistics, and supporting performance controls.
+A patch-based extension for EVEJS.
 
 > This is a patch-only repository, not a runnable server distribution.
 > It contains neither the compatible server baseline nor an EVE client, CCP assets,
 > databases, certificates, generated portraits, or private server
 > configuration. Obtain a compatible base independently and apply the patch to
 > your own clean copy.
-
-`v0.2.2` is the current release for the exact EveJS v0.12.3.1 compatible
-baseline. It includes the replacement-economy, procurement, mobilization,
-faction-hostility, kill-credit, and industrial-crew updates developed after
-the first public build, plus first-start, X-Eve scheduler-capacity, and
-Docker launcher-readiness fixes.
-Back up any installation and world data before applying the patch.
 
 X Command is intentionally not included in this repository. The Living
 Universe core keeps the industrial-crew services and adapter-neutral command
@@ -25,48 +15,36 @@ patch to its web interface, API, authentication, or account-linking layer.
 
 ## Compatibility
 
-The current patch targets one exact **v0.12.3.1 compatible server baseline**. The
-independently obtained archive used to build and verify this release has this
-SHA-256:
-
-```text
-1DEB61A51F808D9F2B330214DA64EC297D9EE5F96EE4B8265692A65F35EEFC1E
-```
-
-Check an archive in PowerShell with:
-
-```powershell
-Get-FileHash -Algorithm SHA256 'C:\path\to\EveJS-v0.12.3.1.zip'
-```
+See [CHANGELOG](CHANGELOG.md) for supported EVEJS versions and release history.
 
 Do not apply the patch to another server version, an already modified tree, or
-your only working copy. The installer validates the expected v0.12.3.1 baseline
+your only working copy. The installer validates the expected baseline
 before changing anything and stops on a mismatch.
 
 ## Install
 
 You need Git for Windows, PowerShell, Node.js, Rust, and the Visual Studio C++
 Build Tools used by EveJS's standalone market service. Stop the server and its
-supporting services, extract a clean v0.12.3.1 base, then run:
+supporting services, extract a clean EVEJS baseline, then run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\installer\Install-XEvePatch.ps1 `
-  -EveJSPath 'C:\path\to\EveJS-v0.12.3.1'
+  -EveJSPath 'C:\path\to\EveJS'
 ```
 
-The installer applies the single versioned patch, verifies the result, and
+The installer applies the patch, verifies the result, and
 rolls back automatically if an installation step fails. The batch-file wrapper
 is equivalent:
 
 ```bat
-installer\Install.bat "C:\path\to\EveJS-v0.12.3.1"
+installer\Install.bat "C:\path\to\EveJS"
 ```
 
 Verify the installation separately with:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\installer\Verify-XEvePatch.ps1 `
-  -EveJSPath 'C:\path\to\EveJS-v0.12.3.1'
+  -EveJSPath 'C:\path\to\EveJS'
 ```
 
 See [Installation](docs/INSTALL.md) for backup, verification, test, and
@@ -120,6 +98,88 @@ See [Configuration](docs/CONFIGURATION.md) and
 [Performance](docs/PERFORMANCE.md) before changing population or physical NPC
 budgets.
 
+## Docker deployment
+
+> If you're running on Windows, make sure WSL has enough memory allocated. The testing environment uses 8GB of RAM. It won't necessarily consume that much, but if you encounter I/O stalls or infinite disk reads, check your RAM settings.
+> You can configure it in %UserProfile%\.wslconfig or Docker Desktop → Settings → Resources → WSL2.
+
+The patch ships Docker overlay files that adapt the upstream EveJS Docker
+infrastructure for X-Eve features. After patching a clean baseline,
+rebuild the local image and seed the market database:
+
+```bash
+cd EveJS-{your evejs version}
+
+# Build the patched image
+docker compose build
+
+# Initialise the game database (SDE download, first start only)
+docker compose run --rm init
+
+# Seed the market database (choose one seed engine)
+docker compose run --rm --no-deps market-tools rebuild v1 --preset jita_new_caldari
+# or use the Tranquility snapshot:
+# docker compose run --rm --no-deps market-tools rebuild v2
+
+# Start the stack
+docker compose up --detach
+```
+
+The patched entrypoint automatically synchronises the Living Economy station
+topology before the Node.js server starts.
+
+### Multi-container architecture
+
+The compose stack runs three services from the same image:
+
+| Service        | Command        | Role                                                     |
+| -------------- | -------------- | -------------------------------------------------------- |
+| `init`         | `init`         | One-shot SDE download and game-database build            |
+| `market`       | `market`       | Rust market daemon (RPC port 40111, health 40110)        |
+| `server`       | `server`       | Node.js game server with X-Eve, Living Universe, economy |
+| `market-tools` | `market-tools` | CLI for market database management (profile `tools`)     |
+
+The `server` service depends on `market:healthy` so the topology sync and
+runtime have a ready market database.
+
+### Configuration
+
+Set X-Eve feature flags via the `evejs.config.x-eve.json` file (included in the
+image) or override individual settings through environment variables:
+
+```yaml
+# docker-compose.override.yml
+services:
+  server:
+    environment:
+      EVEJS_X_EVE_ENABLED: "false"
+      EVEJS_LIVING_UNIVERSE_POPULATION_SIZE: "1000"
+      EVEJS_LIVING_ECONOMY_ENABLED: "true"
+```
+
+### Data persistence
+
+All persistent data lives in the `evejs-data` Docker volume:
+
+- Game database (SDE)
+- Market database (SQLite, with backup rotation)
+- Runtime-generated images (character portraits, alliance logos)
+- X-Eve and Living Universe runtime state (SQLite via gameStore)
+
+### Ports
+
+Default compose binding is `127.0.0.1` only. Exposed ports:
+
+| Port  | Service                     | Protocol |
+| ----- | --------------------------- | -------- |
+| 26000 | Game server                 | TCP      |
+| 26001 | Image server                | TCP      |
+| 26002 | Microservices               | TCP      |
+| 26003 | CDN loopback (HTTPS)        | TCP      |
+| 40110 | Market daemon (HTTP health) | TCP      |
+| 40111 | Market daemon (RPC)         | TCP      |
+| 5222  | XMPP                        | TCP      |
+
 ## What the patch adds
 
 - Persistent NPC pilots with affiliations, roles, racial doctrines, loadouts,
@@ -147,12 +207,18 @@ Read [Architecture](docs/ARCHITECTURE.md) for the simulation model.
 
 ## Repository contents
 
-- `patches/v0.12.3.1/x-eve-living-universe-v0.2.2.patch` - the single
-  versioned source patch.
+- `patches/x-eve-living-universe.patch` - the source patch.
+- `patches/docker-overlay/` - Docker deployment adaptation files
+  (`.dockerignore`, `docker/entrypoint.sh`) applied after the source patch.
+- `patches/baseline-manifest.json` -
+  expected SHA-256 and size for every EveJS file the patch touches.
+- `patches/installed-manifest.json` -
+  expected SHA-256 and size for every file after the patch is applied.
 - `installer/` - baseline validation, installation, verification, rollback, and
   uninstall helpers.
 - `docs/` - public installation, configuration, architecture, and performance
   notes.
+- `CHANGELOG.md` - release history.
 
 No patched server tree is stored here. Runtime data and private deployment
 details do not belong in this repository.

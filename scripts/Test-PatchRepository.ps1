@@ -379,7 +379,7 @@ foreach ($item in $repositoryItems) {
     'installer' { $extension -in @('.ps1', '.bat', '.cmd', '.md'); break }
     'scripts' { $extension -in @('.ps1', '.md'); break }
     '.github' { $extension -in @('.yml', '.yaml', '.md'); break }
-    'patches' { $extension -in @('.patch', '.json') -or $leaf -ceq 'SHA256SUMS'; break }
+    'patches' { $extension -in @('.patch', '.json', '.dockerignore', '.sh', '.js') -or $leaf -ceq 'SHA256SUMS'; break }
     default { $true }
   }
 
@@ -449,7 +449,7 @@ $patchKinds = @{}
 if ($patchFiles.Count -eq 1) {
   $canonicalPatch = $patchFiles[0]
   $canonicalPatchPath = Convert-ToRepositoryPath -FullName $canonicalPatch.FullName
-  if ($canonicalPatchPath -cne 'patches/v0.12.3.1/x-eve-living-universe-v0.2.2.patch') {
+  if ($canonicalPatchPath -cne 'patches/x-eve-living-universe.patch') {
     Add-AuditFailure "Canonical patch has an unexpected release path or name: $canonicalPatchPath"
   }
 
@@ -687,7 +687,7 @@ foreach ($manifestName in @('baseline-manifest.json', 'installed-manifest.json')
 
   $manifestRecord = $manifestByName[$manifestName]
   $manifestProperties = @($manifestRecord.Data.PSObject.Properties.Name)
-  foreach ($requiredProperty in @('schemaVersion', 'release', 'fileCount', 'files')) {
+  foreach ($requiredProperty in @('schemaVersion', 'pluginVersion', 'fileCount', 'files')) {
     if ($manifestProperties -notcontains $requiredProperty) {
       Add-AuditFailure "$manifestName is missing required property: $requiredProperty"
     }
@@ -696,8 +696,8 @@ foreach ($manifestName in @('baseline-manifest.json', 'installed-manifest.json')
   if ($manifestProperties -contains 'schemaVersion' -and [string]$manifestRecord.Data.schemaVersion -cne '1') {
     Add-AuditFailure "$manifestName has an unsupported schemaVersion."
   }
-  if ($manifestProperties -contains 'release' -and [string]::IsNullOrWhiteSpace([string]$manifestRecord.Data.release)) {
-    Add-AuditFailure "$manifestName has an empty release identifier."
+  if ($manifestProperties -contains 'pluginVersion' -and [string]::IsNullOrWhiteSpace([string]$manifestRecord.Data.pluginVersion)) {
+    Add-AuditFailure "$manifestName has an empty pluginVersion identifier."
   }
   if ($manifestProperties -contains 'fileCount') {
     $declaredFileCount = 0L
@@ -713,9 +713,9 @@ foreach ($manifestName in @('baseline-manifest.json', 'installed-manifest.json')
 if (
   $manifestByName.ContainsKey('baseline-manifest.json') -and
   $manifestByName.ContainsKey('installed-manifest.json') -and
-  [string]$manifestByName['baseline-manifest.json'].Data.release -cne [string]$manifestByName['installed-manifest.json'].Data.release
+  [string]$manifestByName['baseline-manifest.json'].Data.pluginVersion -cne [string]$manifestByName['installed-manifest.json'].Data.pluginVersion
 ) {
-  Add-AuditFailure 'Release identifiers do not match between the two manifests.'
+  Add-AuditFailure 'Plugin version identifiers do not match between the two manifests.'
 }
 
 if ($null -ne $canonicalPatch -and $manifestByName.Count -gt 0) {
@@ -819,10 +819,10 @@ $checksumFiles = @(
     Where-Object { $_.Name -ceq 'SHA256SUMS' }
 )
 
-if ($checksumFiles.Count -ne 1) {
-  Add-AuditFailure "Expected exactly one SHA256SUMS file; found $($checksumFiles.Count)."
+if ($checksumFiles.Count -gt 1) {
+  Add-AuditFailure "Expected at most one SHA256SUMS file; found $($checksumFiles.Count)."
 }
-elseif ($null -ne $canonicalPatch) {
+elseif ($checksumFiles.Count -eq 1 -and $null -ne $canonicalPatch) {
   $checksumFile = $checksumFiles[0]
   if ((Get-NormalizedFullPath -Path $checksumFile.DirectoryName) -cne (Get-NormalizedFullPath -Path $canonicalPatch.DirectoryName)) {
     Add-AuditFailure 'SHA256SUMS must be adjacent to the canonical patch.'

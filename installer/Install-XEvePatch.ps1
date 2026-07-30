@@ -569,12 +569,59 @@ function Write-JsonAtomically {
     }
 }
 
+function Backup-DockerOverlayOriginals {
+    param(
+        [string]$TargetRoot,
+        [string]$BackupRoot
+    )
+    $dockerBackupRoot = Join-Path $BackupRoot 'docker-overlay'
+    [System.IO.Directory]::CreateDirectory($dockerBackupRoot) | Out-Null
+    $backedUp = @()
+    foreach ($relativePath in $dockerOverlayFiles) {
+        $targetPath = Join-Path $TargetRoot $relativePath
+        if (Test-Path -LiteralPath $targetPath -PathType Leaf) {
+            $backupPath = Join-Path $dockerBackupRoot $relativePath
+            $parent = Split-Path -Parent $backupPath
+            if (-not (Test-Path -LiteralPath $parent -PathType Container)) {
+                [System.IO.Directory]::CreateDirectory($parent) | Out-Null
+            }
+            [System.IO.File]::Copy($targetPath, $backupPath, $false)
+            $backedUp += @{path = $relativePath; sha256 = Get-Sha256 $targetPath}
+        }
+    }
+    return $backedUp
+}
+
+function Apply-DockerOverlay {
+    param(
+        [string]$TargetRoot
+    )
+    $overlaySource = Join-Path $releaseRoot 'patches\docker-overlay'
+    if (-not (Test-Path -LiteralPath $overlaySource -PathType Container)) {
+        throw "Docker overlay directory is missing: $overlaySource"
+    }
+    foreach ($relativePath in $dockerOverlayFiles) {
+        $sourcePath = Join-Path $overlaySource $relativePath
+        $targetPath = Join-Path $TargetRoot $relativePath
+        if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
+            throw "Docker overlay file is missing: $sourcePath"
+        }
+        $parent = Split-Path -Parent $targetPath
+        if (-not (Test-Path -LiteralPath $parent -PathType Container)) {
+            [System.IO.Directory]::CreateDirectory($parent) | Out-Null
+        }
+        [System.IO.File]::Copy($sourcePath, $targetPath, $true)
+    }
+}
+
 $installerRoot = Split-Path -Parent $PSCommandPath
 $releaseRoot = [System.IO.Path]::GetFullPath((Join-Path $installerRoot '..'))
-$patchDirectory = Join-Path $releaseRoot 'patches\v0.12.3.1'
-$patchPath = Join-Path $patchDirectory 'x-eve-living-universe-v0.2.2.patch'
+$patchDirectory = Join-Path $releaseRoot 'patches'
+$patchPath = Join-Path $patchDirectory 'x-eve-living-universe.patch'
 $baselineManifestPath = Join-Path $patchDirectory 'baseline-manifest.json'
 $installedManifestPath = Join-Path $patchDirectory 'installed-manifest.json'
+$dockerOverlayDir = Join-Path $patchDirectory 'docker-overlay'
+$dockerOverlayFiles = @('.dockerignore', 'docker/entrypoint.sh', 'server/src/gameStore/sqliteStore.js')
 
 $targetRoot = Get-CanonicalDirectory $EveJSPath
 Assert-EveJSSentinel $targetRoot
@@ -669,6 +716,10 @@ try {
     Write-Step 'Verifying runtime static-data references'
     Assert-RuntimeStaticDataReferences $targetRoot $installedMap
 
+    Write-Step 'Applying Docker deployment overlay'
+    $dockerOverlayState = Backup-DockerOverlayOriginals $targetRoot $backupRoot
+    Apply-DockerOverlay $targetRoot
+
     $stateFiles = @(
         foreach ($path in ($installedMap.Keys | Sort-Object)) {
             $record = $installedMap[$path]
@@ -683,13 +734,17 @@ try {
     $relativeBackupRoot = $backupRoot.Substring($installRoot.Length).TrimStart('\', '/').Replace('\', '/')
     $installState = [ordered]@{
         schemaVersion = 1
-        release = $ReleaseVersion
+        pluginVersion = $ReleaseVersion
         baseline = $BaselineVersion
         installedAtUtc = [DateTime]::UtcNow.ToString('o')
         patchSha256 = $actualPatchSha256
         sourceArchiveSha256 = $archiveSha256
         backupRoot = $relativeBackupRoot
         files = $stateFiles
+        dockerOverlay = @{
+            enabled = $true
+            files = $dockerOverlayState
+        }
     }
     Write-JsonAtomically $installStatePath $installState
     $installCommitted = $true
