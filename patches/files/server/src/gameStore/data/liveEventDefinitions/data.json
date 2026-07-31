@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": 2,
+  "definitions": [
+    {
+      "definitionID": "kernel.noop",
+      "revision": 1,
+      "eventType": "noop",
+      "enabled": false,
+      "name": "Live Event Kernel Verification",
+      "lifecycle": {
+        "dormantSeconds": 1,
+        "activeSeconds": 1,
+        "aftermathSeconds": 1
+      },
+      "discovery": {
+        "mode": "none"
+      },
+      "limits": {
+        "physicalShips": 0,
+        "dynamicObjects": 0
+      }
+    },
+    {
+      "definitionID": "industrial.mining.highsec.small",
+      "revision": 2,
+      "eventType": "industrial_mining",
+      "enabled": true,
+      "name": "Independent Industrial Mining Operation",
+      "securityBands": ["highsec"],
+      "lifecycle": {
+        "engagementSeconds": 1800,
+        "aftermathSeconds": 900,
+        "cooldownSeconds": 3600
+      },
+      "discovery": {
+        "mode": "belt_overlay"
+      },
+      "limits": {
+        "physicalShips": 15,
+        "dynamicObjects": 30
+      },
+      "producer": {
+        "enabled": true,
+        "checkIntervalSeconds": 60,
+        "targetActiveCount": 1,
+        "targetSystemIDs": [
+          30000140,
+          30000144,
+          30000145,
+          30001363,
+          30002780,
+          30000143,
+          30000138
+        ]
+      },
+      "content": {
+        "virtualCycleSeconds": 60,
+        "virtualQuantityPerCycle": 500,
+        "virtualTargetsPerCycle": 4,
+        "emptyCheckLimit": 3,
+        "minerCount": 4,
+        "haulerCount": 1,
+        "lastObserverGraceSeconds": 60
+      }
+    },
+    {
+      "definitionID": "battle.aftermath.skirmish.small",
+      "revision": 1,
+      "eventType": "battle_aftermath",
+      "enabled": false,
+      "name": "Fresh Battlefield",
+      "securityBands": ["highsec", "lowsec", "nullsec"],
+      "lifecycle": {
+        "discoverableSeconds": 1800,
+        "materializedSeconds": 2700,
+        "lastObserverGraceSeconds": 600,
+        "cooldownSeconds": 3600
+      },
+      "discovery": {
+        "mode": "cosmic_anomaly"
+      },
+      "limits": {
+        "physicalShips": 8,
+        "dynamicObjects": 48
+      }
+    }
+  ]
+}
+
+

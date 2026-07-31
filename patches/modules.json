@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 1,
+  "modules": {
+    "core": {
+      "name": "Core platform",
+      "gate": null,
+      "description": "Shared, always-installed platform: launchers, configuration, persistence (gameStore), chat infrastructure, the main space tick, movement/destiny, networking, image/web gateways, and the general NPC engine.",
+      "files": [
+        ".dockerignore",
+        "Play.bat",
+        "README.md",
+        "StartMarketServer.bat",
+        "StartServer.bat",
+        "docker/entrypoint.sh",
+        "evejs.config.x-eve.json",
+        "server/index.js",
+        "server/src/_secondary/chat/chatRuntime.js",
+        "server/src/_secondary/express/gatewayServices/webChatGatewayService.js",
+        "server/src/_secondary/image/imageRequestResolver.js",
+        "server/src/config/index.js",
+        "server/src/gameStore/index.js",
+        "server/src/gameStore/sqliteStore.js",
+        "server/src/gameStore/tableOwnership.js",
+        "server/src/gameStore/tableRepository.js",
+        "server/src/network/tcp/index.js",
+        "server/src/services/chat/chatCommands.js",
+        "server/src/services/chat/sessionRegistry.js",
+        "server/src/services/chat/xmppStubServer.js",
+        "server/src/services/config/configService.js",
+        "server/src/services/corporation/corpMemberQueryState.js",
+        "server/src/services/corporation/corpRegistryRuntime.js",
+        "server/src/services/corporation/corpWalletState.js",
+        "server/src/services/corporation/corporationRuntimeState.js",
+        "server/src/services/ship/devCommandShipRuntime.js",
+        "server/src/space/destiny/index.js",
+        "server/src/space/destiny/presentation/specialFxPayloads.js",
+        "server/src/space/npc/nativeNpcService.js",
+        "server/src/space/npc/nativeNpcStore.js",
+        "server/src/space/npc/npcBehaviorLoop.js",
+        "server/src/space/npc/npcCapabilityResolver.js",
+        "server/src/space/npc/npcCombatDormancy.js",
+        "server/src/space/npc/npcData.js",
+        "server/src/space/npc/npcEntityEwarCatalog.js",
+        "server/src/space/npc/npcEquipment.js",
+        "server/src/space/npc/npcPhysicalBudget.js",
+        "server/src/space/npc/npcService.js",
+        "server/src/space/runtime.js",
+        "server/src/space/runtimePerformanceTelemetry.js",
+        "server/src/space/transitions.js",
+        "server/src/space/worldData.js",
+        "tools/ServerStack/EnsureMarketServer.ps1",
+        "tools/ServerStack/TestLivingUniverseReady.ps1",
+        "tools/ServerStack/VerifyEnsureMarketServer.ps1",
+        "tools/ServerStack/VerifyPlayServerAvailability.ps1"
+      ],
+      "verify": [],
+      "scripts": []
+    },
+    "livingUniverse": {
+      "name": "Living Universe",
+      "gate": "livingUniverseEnabled",
+      "description": "Persistent NPC pilots, virtual travel, observed materialization, portraits, affiliations, and ambient traffic.",
+      "files": [
+        "server/src/services/character/charMgrService.js",
+        "server/src/services/character/characterState.js",
+        "server/src/space/npc/ambientTraffic/ambientTrafficNpcCatalog.js",
+        "server/src/space/npc/ambientTraffic/ambientTrafficRuntime.js",
+        "server/src/space/npc/ambientTraffic/ambientTrafficState.js",
+        "server/src/space/npc/ambientTraffic/livingUniverseAffiliations.js",
+        "server/src/space/npc/ambientTraffic/livingUniversePilotDirectory.js",
+        "server/src/space/npc/ambientTraffic/livingUniverseRuntime.js",
+        "server/src/space/npc/ambientTraffic/livingUniverseState.js",
+        "server/src/space/npc/governance/npcDoctrineGovernance.js",
+        "server/src/space/npc/governance/regionalTrafficDoctrineCatalog.js",
+        "server/src/space/npc/governance/trafficDoctrineCatalog.js"
+      ],
+      "verify": [
+        "server/scripts/verifyAmbientTrafficPilot.js",
+        "server/scripts/verifyLivingUniverseIncrementalPersistence.js",
+        "server/scripts/verifyLivingUniversePhysicalBehavior.js",
+        "server/scripts/verifyLivingUniversePilotSyncBudget.js",
+        "server/scripts/verifyLivingUniversePilots.js",
+        "server/scripts/verifyLivingUniversePopulation.js",
+        "server/scripts/verifyLivingUniversePortraits.js",
+        "server/scripts/verifyLivingUniverseReplacementSchedulerPriority.js",
+        "server/scripts/verifyLivingUniverseStressAcceleration.js",
+        "server/scripts/verifyLivingUniverseTransitTiming.js",
+        "server/scripts/verifySyntheticChatPresence.js"
+      ],
+      "scripts": [
+        "server/scripts/syncLivingUniversePortraits.js"
+      ]
+    },
+    "livingEconomy": {
+      "name": "Living Economy",
+      "gate": "livingEconomyEnabled",
+      "description": "Conserved regional stock, mining, hauling, procurement, production, market topology, and the Rust market daemon changes.",
+      "files": [
+        "externalservices/market-server/crates/market-common/src/lib.rs",
+        "externalservices/market-server/src/rpc.rs",
+        "externalservices/market-server/src/state.rs",
+        "server/src/services/market/marketDaemonClient.js",
+        "server/src/services/market/marketProxyService.js",
+        "server/src/services/market/marketTopology.js",
+        "server/src/services/mining/miningNpcOperations.js",
+        "server/src/services/mining/miningRuntimeState.js",
+        "server/src/services/mining/virtualMiningTransactions.js",
+        "server/src/space/asteroids/asteroidService.js",
+        "server/src/space/modules/salvagerRuntime.js",
+        "server/src/space/npc/ambientTraffic/livingEconomyCatalog.js",
+        "server/src/space/npc/ambientTraffic/livingEconomyDemandCoverage.js",
+        "server/src/space/npc/ambientTraffic/livingEconomyIndustrialWorkforce.js",
+        "server/src/space/npc/ambientTraffic/livingEconomyIndustry.js",
+        "server/src/space/npc/ambientTraffic/livingEconomyMobilization.js",
+        "server/src/space/npc/ambientTraffic/livingEconomyProcurement.js",
+        "server/src/space/npc/ambientTraffic/livingEconomyRoutePlanner.js",
+        "server/src/space/npc/ambientTraffic/livingEconomyRuntime.js",
+        "server/src/space/npc/ambientTraffic/livingEconomySalvage.js",
+        "server/src/space/npc/ambientTraffic/livingEconomyState.js",
+        "server/src/space/npc/ambientTraffic/livingEconomyTelemetry.js",
+        "server/src/space/npc/ambientTraffic/livingEconomyWorkBudget.js",
+        "tools/market-seed/src/main.rs"
+      ],
+      "verify": [
+        "server/scripts/verifyLivingEconomy.js",
+        "server/scripts/verifyLivingEconomyAdjustmentReplay.js",
+        "server/scripts/verifyLivingEconomyAutomaticRegionalStock.js",
+        "server/scripts/verifyLivingEconomyCampaignAdjustmentReplay.js",
+        "server/scripts/verifyLivingEconomyHaulerRepositioning.js",
+        "server/scripts/verifyLivingEconomyIncrementalHullDemand.js",
+        "server/scripts/verifyLivingEconomyIndustryReplay.js",
+        "server/scripts/verifyLivingEconomyMarketTopology.js",
+        "server/scripts/verifyLivingEconomyMobilization.js",
+        "server/scripts/verifyLivingEconomyPriorityDemand.js",
+        "server/scripts/verifyLivingEconomyProductionInputFocus.js",
+        "server/scripts/verifyLivingEconomyRegionalCache.js",
+        "server/scripts/verifyLivingEconomyReplacementInputReservation.js",
+        "server/scripts/verifyLivingEconomyReplacementLogistics.js",
+        "server/scripts/verifyLivingEconomyStaleFreightInvalidation.js",
+        "server/scripts/verifyLivingEconomyStaleFreightRecovery.js",
+        "server/scripts/verifyLivingEconomyTelemetry.js"
+      ],
+      "scripts": [
+        "server/scripts/auditLivingEconomyTransit.js",
+        "server/scripts/bootstrapLivingEconomyMarket.js",
+        "server/scripts/inspectLivingEconomy.js",
+        "server/scripts/inspectLivingEconomyRepositions.js",
+        "server/scripts/recoverLivingEconomyIndustryJobs.js",
+        "server/scripts/repairLivingEconomyIndustryReplay.js",
+        "server/scripts/reportLivingEconomyTelemetry.js",
+        "server/scripts/syncLivingEconomyMarketTopology.js"
+      ]
+    },
+    "livingConflict": {
+      "name": "Living Conflict",
+      "gate": "livingConflictEnabled",
+      "description": "Witnessable combat, faction hostility, kill credit, losses, replacement demand, roaming conflicts, and security responses.",
+      "files": [
+        "server/src/services/bounty/bountyProxyService.js",
+        "server/src/services/character/factionHostilityRuntime.js",
+        "server/src/services/character/factionKillStandingRuntime.js",
+        "server/src/services/structure/structureState.js",
+        "server/src/space/combat/killmailTracker.js",
+        "server/src/space/combat/weaponDogma.js",
+        "server/src/space/npc/ambientTraffic/livingConflictCampaignCatalog.js",
+        "server/src/space/npc/ambientTraffic/livingConflictRuntime.js",
+        "server/src/space/npc/ambientTraffic/livingKillCreditLedger.js",
+        "server/src/space/npc/ambientTraffic/livingRoamingKernel.js",
+        "server/src/space/npc/empireSecurity/empireSecurityNpcCatalog.js"
+      ],
+      "verify": [
+        "server/scripts/verifyDestructionReplacementTelemetry.js",
+        "server/scripts/verifyLivingConflictEconomy.js",
+        "server/scripts/verifyLivingConflictIncidents.js",
+        "server/scripts/verifyLivingConflictMaterialization.js",
+        "server/scripts/verifyLivingFactionHostility.js",
+        "server/scripts/verifyLivingReplacementCoverage.js",
+        "server/scripts/verifyLivingRoamingIntegration.js",
+        "server/scripts/verifyLivingRoamingKernel.js"
+      ],
+      "scripts": [
+        "server/scripts/analyzeDestructionReplacementStress.js"
+      ]
+    },
+    "industrialHirelings": {
+      "name": "Industrial Hirelings & Mining Crews",
+      "gate": "industrialHirelingsEnabled",
+      "description": "Corporation-visible industrial crews: hirelings, mining crews, pooled defensive drones, employee projections, and contracts.",
+      "files": [
+        "server/src/services/corporation/corpReadOnlyEmployeeProjection.js",
+        "server/src/services/drone/droneDogma.js",
+        "server/src/services/drone/droneRuntime.js",
+        "server/src/services/industrialHirelings/industrialHirelingBookmarkLifecycle.js",
+        "server/src/services/industrialHirelings/industrialHirelingBookmarks.js",
+        "server/src/services/industrialHirelings/industrialHirelingCargoCustody.js",
+        "server/src/services/industrialHirelings/industrialHirelingCommand.js",
+        "server/src/services/industrialHirelings/industrialHirelingContracts.js",
+        "server/src/services/industrialHirelings/industrialHirelingIdentity.js",
+        "server/src/services/industrialHirelings/industrialHirelingNavigation.js",
+        "server/src/services/industrialHirelings/industrialHirelingRuntime.js",
+        "server/src/services/industrialHirelings/industrialHirelingSceneLifecycle.js",
+        "server/src/services/industrialHirelings/industrialHirelingScheduler.js",
+        "server/src/services/industrialHirelings/industrialHirelingSites.js",
+        "server/src/services/industrialHirelings/industrialHirelingState.js",
+        "server/src/services/industrialHirelings/industrialMiningCrewCatalog.js",
+        "server/src/space/npc/governance/industrialCrewDoctrineCatalog.js",
+        "server/tests/industrialHirelingNavigation.test.js"
+      ],
+      "verify": [
+        "server/scripts/verifyCorporationSyntheticEmployeeProjection.js",
+        "server/scripts/verifyIndustrialCrewPresenceLifecycle.js",
+        "server/scripts/verifyIndustrialHirelingBookmarks.js",
+        "server/scripts/verifyIndustrialHirelingContracts.js",
+        "server/scripts/verifyIndustrialMiningCrewPartialRepair.js",
+        "server/scripts/verifyManagedIndustrialCrewDefense.js"
+      ],
+      "scripts": [
+        "server/scripts/migrateIndustrialHirelingsToCrews.js"
+      ]
+    },
+    "familyEstate": {
+      "name": "Family Estate",
+      "gate": "familyEstateEnabled",
+      "description": "Shared-corporation estate, restoration flow, and the permanent estate wormhole conduits/signatures.",
+      "files": [
+        "server/src/services/chat/wormhole/index.js",
+        "server/src/services/chat/wormhole/wormholeCommandHandlers.js",
+        "server/src/services/estate/familyEstateClaimState.js",
+        "server/src/services/estate/familyEstateProfile.js",
+        "server/src/services/estate/familyEstateProjectState.js",
+        "server/src/services/estate/familyEstateProjectsRuntime.js",
+        "server/src/services/estate/familyEstatePrologueRuntime.js",
+        "server/src/services/estate/familyEstatePrologueState.js",
+        "server/src/services/estate/familyEstateRuntime.js",
+        "server/src/services/exploration/signatures/providers/wormholeSignatureProvider.js",
+        "server/src/services/exploration/wormholes/wormholeMgrService.js",
+        "server/src/services/exploration/wormholes/wormholeRuntime.js",
+        "server/src/services/exploration/wormholes/wormholeRuntimeState.js"
+      ],
+      "verify": [
+        "server/scripts/verifyFamilyEstate.js",
+        "server/scripts/verifyFamilyEstateClaim.js",
+        "server/scripts/verifyFamilyEstateLogistics.js",
+        "server/scripts/verifyFamilyEstateProjects.js",
+        "server/scripts/verifyFamilyEstatePrologue.js",
+        "server/scripts/verifyFamilyEstateWormholeSignatures.js"
+      ],
+      "scripts": []
+    },
+    "liveEvents": {
+      "name": "Live Events",
+      "gate": "liveEventsEnabled",
+      "description": "Deadline-driven optional event framework and its definitions.",
+      "files": [
+        "server/src/gameStore/data/liveEventDefinitions/data.json",
+        "server/src/space/liveEvents/deadlineQueue.js",
+        "server/src/space/liveEvents/industrialMiningEventHandler.js",
+        "server/src/space/liveEvents/liveEventCatalog.js",
+        "server/src/space/liveEvents/liveEventOperator.js",
+        "server/src/space/liveEvents/liveEventRuntime.js",
+        "server/src/space/liveEvents/liveEventState.js"
+      ],
+      "verify": [
+        "server/scripts/verifyDeadlineQueue.js",
+        "server/scripts/verifyLiveEventOperator.js",
+        "server/scripts/verifyLiveEventsCore.js"
+      ],
+      "scripts": []
+    },
+    "xEve": {
+      "name": "X-Eve Core",
+      "gate": "xEveEnabled",
+      "description": "Experimental economic kernel, ledger, event circuit, load governor, and adaptive scheduler.",
+      "files": [
+        "server/src/services/xEve/xEveEventBridge.js",
+        "server/src/services/xEve/xEveLedger.js",
+        "server/src/services/xEve/xEveLoadGovernor.js",
+        "server/src/services/xEve/xEveObservation.js",
+        "server/src/services/xEve/xEveRuntime.js",
+        "server/src/services/xEve/xEveState.js"
+      ],
+      "verify": [
+        "server/scripts/verifyXEveCore.js",
+        "server/scripts/verifyXEveEventCircuit.js"
+      ],
+      "scripts": [
+        "server/scripts/captureXEveStressSample.js"
+      ]
+    }
+  }
+}

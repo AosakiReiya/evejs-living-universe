@@ -1,16 +1,5 @@
 * text=auto
 
-# Keep the canonical patch and its integrity metadata byte-stable on Windows.
-*.patch text eol=lf
-*.json text eol=lf
-SHA256SUMS text eol=lf
-
-# These release artifacts are hashed byte-for-byte by the installer and audit.
-# Preserve the exact validated bytes instead of normalizing them at commit time.
-patches/x-eve-living-universe.patch -text -eol whitespace=-trailing-space
-patches/baseline-manifest.json -text -eol whitespace=-trailing-space
-patches/installed-manifest.json -text -eol whitespace=-trailing-space
-
 # Repository documentation and automation use stable source line endings.
 *.md text eol=lf
 *.yml text eol=lf
@@ -19,3 +8,12 @@ patches/installed-manifest.json -text -eol whitespace=-trailing-space
 # These entry points are intended for Windows hosts.
 *.ps1 text eol=crlf
 *.bat text eol=crlf
+
+# Overlay content is hashed byte-for-byte by xeve-patch and the audit.
+# Preserve the exact validated bytes instead of normalizing them at commit time.
+patches/files/** -text whitespace=-trailing-space
+patches/docker-overlay/** -text whitespace=-trailing-space
+patches/manifest.json -text whitespace=-trailing-space
+
+# Legacy v0.2.3 release data (patch + manifests) is also hash-verified.
+legacy/patches/** -text whitespace=-trailing-space

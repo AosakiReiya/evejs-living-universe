@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test and lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test ./...
+      - name: Audit release package
+        run: go run ./cmd/xeve-patch audit
+
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - linux/amd64
+          - linux/arm64
+          - darwin/amd64
+          - darwin/arm64
+          - windows/amd64
+          - windows/arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Compute output name
+        id: names
+        run: |
+          os="${target%/*}"; arch="${target#*/}"
+          ext=""; [ "$os" = "windows" ] && ext=".exe"
+          echo "os=$os" >> "$GITHUB_OUTPUT"
+          echo "arch=$arch" >> "$GITHUB_OUTPUT"
+          echo "name=xeve-patch-${os}-${arch}${ext}" >> "$GITHUB_OUTPUT"
+        env:
+          target: ${{ matrix.target }}
+      - name: Build
+        run: |
+          GOOS=${{ steps.names.outputs.os }} GOARCH=${{ steps.names.outputs.arch }} CGO_ENABLED=0 \
+            go build -trimpath \
+            -ldflags "-X github.com/AosakiReiya/evejs-living-universe/internal/buildinfo.Version=$(cat VERSION)" \
+            -o dist/${{ steps.names.outputs.name }} ./cmd/xeve-patch
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.names.outputs.name }}
+          path: dist/${{ steps.names.outputs.name }}
+          if-no-files-found: error

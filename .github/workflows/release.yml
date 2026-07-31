@@ -4,50 +4,60 @@ on:
   push:
     tags: 'v*'
 
+permissions:
+  contents: write
+
 jobs:
-  verify-and-release:
+  release:
+    name: Package release ${{ github.ref_name }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify release integrity
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Validate version consistency
         run: |
-          echo "=== Checking patch file ==="
-          ls -lh patches/x-eve-living-universe.patch || exit 1
-
-          echo "=== Checking manifests ==="
-          jq . patches/baseline-manifest.json > /dev/null || exit 1
-          jq . patches/installed-manifest.json > /dev/null || exit 1
-
-          echo "=== Verifying patch SHA256 ==="
-          PATCH_SHA=$(sha256sum patches/x-eve-living-universe.patch | cut -d' ' -f1 | tr '[:lower:]' '[:upper:]')
-          MANIFEST_SHA=$(jq -r '.patchSha256' patches/installed-manifest.json)
-          if [ "$PATCH_SHA" != "$MANIFEST_SHA" ]; then
-            echo "ERROR: Patch SHA256 mismatch"
-            echo "  File:      $PATCH_SHA"
-            echo "  Manifest:  $MANIFEST_SHA"
+          VERSION="$(cat VERSION)"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$tag" != "$VERSION" ]; then
+            echo "ERROR: tag $GITHUB_REF_NAME does not match VERSION ($VERSION)"
             exit 1
           fi
-          echo "Patch SHA256: $PATCH_SHA (matches manifest)"
+          go run ./cmd/xeve-patch audit
 
-      - name: Build release archive
-        id: build
+      - name: Cross-compile for all platforms
         run: |
-          PLUGIN_VER=$(jq -r '.pluginVersion' patches/baseline-manifest.json)
-          EVEJS_VER=$(jq -r '.compatibility.version' patches/baseline-manifest.json)
-          echo "evejs_ver=${EVEJS_VER}" >> $GITHUB_OUTPUT
-          ZIP_NAME="X-Eve-Living-Universe-${PLUGIN_VER}-EVEJS-${EVEJS_VER}"
-          mkdir -p "${ZIP_NAME}/patches"
-          cp -r patches/* "${ZIP_NAME}/patches/"
-          cp -r installer "${ZIP_NAME}/"
-          cp -r docs "${ZIP_NAME}/" 2>/dev/null || true
-          cp README.md LICENSE "${ZIP_NAME}/" 2>/dev/null || true
-          cd "${ZIP_NAME}"
-          find patches/ -maxdepth 1 -type f -exec sha256sum {} \; > patches/SHA256SUMS
-          cd ..
-          zip -r "${ZIP_NAME}.zip" "${ZIP_NAME}/"
+          set -e
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+            os="${target%/*}"; arch="${target#*/}"
+            ext=""; [ "$os" = "windows" ] && ext=".exe"
+            out="dist/xeve-patch-${os}-${arch}${ext}"
+            echo ">> building $target -> $out"
+            GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath \
+              -ldflags "-X github.com/AosakiReiya/evejs-living-universe/internal/buildinfo.Version=${VERSION}" \
+              -o "$out" ./cmd/xeve-patch
+          done
+
+      - name: Package release zips
+        run: |
+          set -euo pipefail
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
+            os="${target%/*}"; arch="${target#*/}"
+            suffix="${os}-${arch}"
+            pkg="dist/X-Eve-Living-Universe-${VERSION}-${suffix}"
+            mkdir -p "$pkg"
+            cp -r patches "$pkg/patches"
+            cp README.md LICENSE CHANGELOG.md "$pkg/"
+            bin="xeve-patch"; [ "$os" = "windows" ] && bin="xeve-patch.exe"
+            cp "dist/xeve-patch-${suffix}$([ "$os" = "windows" ] && echo .exe)" "$pkg/$bin"
+            ( cd dist && zip -qr "$(basename "$pkg").zip" "$(basename "$pkg")" )
+            echo ">> packaged dist/$(basename "$pkg").zip"
+          done
 
       - name: Extract changelog section
         run: |
@@ -57,12 +67,12 @@ jobs:
             flag
           ' CHANGELOG.md > changelog_section.md
 
-      - name: Create Release
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${{ github.ref_name }}" \
-            --title "X-Eve Living Universe ${{ github.ref_name }} for EVEJS ${{ steps.build.outputs.evejs_ver }}" \
+            --title "X-Eve Living Universe ${{ github.ref_name }}" \
             --notes-file changelog_section.md \
             --generate-notes \
-            X-Eve-Living-Universe-*.zip
+            dist/X-Eve-Living-Universe-*.zip
