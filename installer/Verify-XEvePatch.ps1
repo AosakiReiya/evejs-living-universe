@@ -3,7 +3,8 @@ param(
     [Parameter(Mandatory = $true, Position = 0)]
     [ValidateNotNullOrEmpty()]
     [string]$EveJSPath,
-    [switch]$RunTests
+    [switch]$RunTests,
+    [switch]$PatchIntegrity
 )
 
 Set-StrictMode -Version Latest
@@ -220,6 +221,68 @@ function Invoke-VerificationTests {
     } finally { Pop-Location }
 }
 
+function Test-OverlayModificationsPresent {
+    param([object]$State)
+
+    if ($null -ne $State.dockerOverlay -and $State.dockerOverlay.enabled) {
+        return $true
+    }
+    foreach ($entry in @($State.files)) {
+        if ($null -ne $entry.source -and [string]$entry.source -eq 'overlay') {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Invoke-PatchIntegrityCheck {
+    param(
+        [string]$Target,
+        [string]$StatePath,
+        [string]$PatchPath
+    )
+
+    if (-not (Test-Path -LiteralPath $StatePath -PathType Leaf)) {
+        throw 'Patch integrity check requires an installed patch and install state.'
+    }
+    $state = Read-Json $StatePath 'Local install state'
+    if ([string]$state.patchSha256 -ne ([string]$installedManifest.patchSha256)) {
+        throw 'Local install state belongs to a different patch.'
+    }
+    if (Test-OverlayModificationsPresent $state) {
+        throw 'Patch integrity check requires a clean patched tree without overlay modifications. Use the default verify to validate an installed deployment.'
+    }
+    Test-Files $Target $installedMap -Installed
+    Invoke-PatchCheck $Target $PatchPath -Reverse
+    Write-Host '[X-Eve] Patch integrity and reverse-apply checks passed.'
+}
+
+function Invoke-InstallationVerification {
+    param(
+        [string]$Target,
+        [string]$StatePath,
+        [string]$PatchPath
+    )
+
+    if (Test-Path -LiteralPath $StatePath -PathType Leaf) {
+        $state = Read-Json $StatePath 'Local install state'
+        if ([string]$state.patchSha256 -ne ([string]$installedManifest.patchSha256)) {
+            throw 'Local install state belongs to a different patch.'
+        }
+        $stateMap = Get-ManifestMap $state -Installed
+        Test-Files $Target $stateMap -Installed
+        Test-RuntimeStaticDataReferences $Target $stateMap
+        Write-Host '[X-Eve] Installed deployment state verification passed.'
+        if ($RunTests) { Invoke-VerificationTests $Target }
+    }
+    else {
+        if ($RunTests) { throw '-RunTests requires an installed patch and install state.' }
+        Test-Files $Target $baselineMap
+        Invoke-PatchCheck $Target $PatchPath
+        Write-Host '[X-Eve] Clean v0.12.3.1 baseline integrity and apply checks passed.'
+    }
+}
+
 if ($null -eq (Get-Command git -ErrorAction SilentlyContinue)) {
     throw 'Git for Windows is required but was not found on PATH.'
 }
@@ -242,19 +305,8 @@ $installedMap = Get-ManifestMap $installedManifest -Installed
 if ($baselineMap.Count -ne $installedMap.Count) { throw 'Manifest file counts disagree.' }
 
 $statePath = Join-Path $target '_local\x-eve-patch\install.json'
-if (Test-Path -LiteralPath $statePath -PathType Leaf) {
-    $state = Read-Json $statePath 'Local install state'
-    if ([string]$state.patchSha256 -ne ([string]$installedManifest.patchSha256)) {
-        throw 'Local install state belongs to a different patch.'
-    }
-    Test-Files $target $installedMap -Installed
-    Test-RuntimeStaticDataReferences $target $installedMap
-    Invoke-PatchCheck $target $patchPath -Reverse
-    Write-Host '[X-Eve] Installed patch integrity and reverse-apply checks passed.'
-    if ($RunTests) { Invoke-VerificationTests $target }
-} else {
-    if ($RunTests) { throw '-RunTests requires an installed patch and install state.' }
-    Test-Files $target $baselineMap
-    Invoke-PatchCheck $target $patchPath
-    Write-Host '[X-Eve] Clean v0.12.3.1 baseline integrity and apply checks passed.'
+if ($PatchIntegrity) {
+    Invoke-PatchIntegrityCheck -Target $target -StatePath $statePath -PatchPath $patchPath
+    exit
 }
+Invoke-InstallationVerification -Target $target -StatePath $statePath -PatchPath $patchPath

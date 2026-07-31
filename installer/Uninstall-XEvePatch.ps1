@@ -9,10 +9,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $ReleaseName = 'X-Eve Living Universe'
-$ReleaseVersion = 'v0.2.2'
+$ReleaseVersion = 'v0.2.3'
 $BaselineVersion = 'v0.12.3.1'
 $ExpectedArchiveSha256 = '1DEB61A51F808D9F2B330214DA64EC297D9EE5F96EE4B8265692A65F35EEFC1E'
-$dockerOverlayFiles = @('.dockerignore', 'docker/entrypoint.sh', 'server/src/gameStore/sqliteStore.js')
 
 function Write-Step {
     param([string]$Message)
@@ -245,7 +244,13 @@ function New-ManifestMap {
         else {
             $sha = Assert-Sha256Text $shaValue "$Description SHA-256 for added path $path" -AllowEmpty
         }
-        $map[$path] = [pscustomobject]@{ path = $path; sha256 = $sha; size = $size; kind = $kind }
+        $map[$path] = [pscustomobject]@{
+            path = $path
+            sha256 = $sha
+            size = $size
+            kind = $kind
+            source = [string](Get-ObjectProperty $record @('source'))
+        }
     }
     return $map
 }
@@ -264,15 +269,15 @@ function Assert-ManifestPair {
 
 function Assert-StateMatchesManifest {
     param([hashtable]$StateMap, [hashtable]$InstalledMap)
-    if ($StateMap.Count -ne $InstalledMap.Count) {
-        throw 'Local install state does not match the release manifest file count.'
-    }
     foreach ($path in $InstalledMap.Keys) {
         if (-not $StateMap.ContainsKey($path)) {
             throw "Local install state is missing $path."
         }
         $stateRecord = $StateMap[$path]
         $manifestRecord = $InstalledMap[$path]
+        if ($stateRecord.source -eq 'overlay') {
+            continue
+        }
         if ($stateRecord.kind -ne $manifestRecord.kind -or
             $stateRecord.sha256 -ne $manifestRecord.sha256 -or
             [int64]$stateRecord.size -ne [int64]$manifestRecord.size) {
@@ -416,7 +421,8 @@ function Restore-DockerOverlayOriginals {
     param(
         [string]$TargetRoot,
         [string]$BackupRoot,
-        [object]$InstallState
+        [object]$InstallState,
+        [hashtable]$BaselineMap
     )
     $dockerOverlay = Get-ObjectProperty $InstallState @('dockerOverlay')
     if ($null -eq $dockerOverlay -or -not $dockerOverlay.enabled) {
@@ -430,6 +436,10 @@ function Restore-DockerOverlayOriginals {
     $overlayFiles = @($dockerOverlay.files)
     foreach ($entry in $overlayFiles) {
         $relativePath = $entry.path
+        if ($null -ne $BaselineMap -and $BaselineMap.ContainsKey($relativePath)) {
+            Write-Step "Overlay target $relativePath is also a patch file; it was already restored to baseline."
+            continue
+        }
         $backupPath = Join-Path $overlayBackupRoot $relativePath
         $targetPath = Join-Path $TargetRoot $relativePath
         if (Test-Path -LiteralPath $backupPath -PathType Leaf) {
@@ -531,8 +541,8 @@ try {
         throw "Another X-Eve patch operation appears to be running: $lockPath"
     }
 
-    Write-Step 'Verifying that no installed patch file has been modified'
-    Assert-InstalledFiles $targetRoot $installedMap
+    Write-Step 'Verifying that no installed file has been modified'
+    Assert-InstalledFiles $targetRoot $stateMap
     Write-Step 'Verifying every original-file backup before changing anything'
     Assert-BaselineBackups $targetRoot $backupRoot $baselineMap
 
@@ -540,30 +550,15 @@ try {
     $stagingRoot = Join-Path $installRoot ("uninstall-staging\$timestamp")
     Assert-NoReparsePoint $targetRoot $stagingRoot
     [System.IO.Directory]::CreateDirectory($stagingRoot) | Out-Null
-    Copy-InstalledStaging $targetRoot $stagingRoot $installedMap
+    Copy-InstalledStaging $targetRoot $stagingRoot $stateMap
 
     Write-Step 'Restoring modified originals and removing only unchanged added files'
     $uninstallStarted = $true
     Apply-Uninstall $targetRoot $backupRoot $baselineMap
     Assert-BaselineFiles $targetRoot $baselineMap
 
-    Write-Step 'Backing up current Docker deployment files for rollback safety'
-    $dockerOverlay = Get-ObjectProperty $installState @('dockerOverlay')
-    if ($null -ne $dockerOverlay -and $dockerOverlay.enabled) {
-        $dockerStagingRoot = Join-Path $stagingRoot 'docker-overlay'
-        foreach ($entry in @($dockerOverlay.files)) {
-            $relativePath = $entry.path
-            $sourcePath = Resolve-ChildPath $targetRoot $relativePath
-            if (Test-Path -LiteralPath $sourcePath -PathType Leaf) {
-                $stagingPath = Resolve-ChildPath $dockerStagingRoot $relativePath
-                [System.IO.Directory]::CreateDirectory((Split-Path -Parent $stagingPath)) | Out-Null
-                [System.IO.File]::Copy($sourcePath, $stagingPath, $false)
-            }
-        }
-    }
-
     Write-Step 'Restoring Docker deployment files to originals'
-    Restore-DockerOverlayOriginals $targetRoot $backupRoot $installState
+    Restore-DockerOverlayOriginals $targetRoot $backupRoot $installState $baselineMap
 
     [System.IO.File]::Delete($installStatePath)
     $uninstallCommitted = $true
@@ -575,23 +570,8 @@ catch {
     $rollbackError = $null
     if ($uninstallStarted -and -not $uninstallCommitted -and $null -ne $stagingRoot) {
         try {
-            Write-Warning 'Uninstall failed; restoring the verified patched files from temporary staging.'
-            Restore-InstalledStaging $targetRoot $stagingRoot $installedMap
-            $dockerStagingRoot = Join-Path $stagingRoot 'docker-overlay'
-            if (Test-Path -LiteralPath $dockerStagingRoot -PathType Container) {
-                $dockerOverlay = Get-ObjectProperty $installState @('dockerOverlay')
-                if ($null -ne $dockerOverlay) {
-                    foreach ($entry in @($dockerOverlay.files)) {
-                        $relativePath = $entry.path
-                        $stagingPath = Resolve-ChildPath $dockerStagingRoot $relativePath
-                        if (Test-Path -LiteralPath $stagingPath -PathType Leaf) {
-                            $targetPath = Resolve-ChildPath $targetRoot $relativePath
-                            [System.IO.Directory]::CreateDirectory((Split-Path -Parent $targetPath)) | Out-Null
-                            [System.IO.File]::Copy($stagingPath, $targetPath, $true)
-                        }
-                    }
-                }
-            }
+            Write-Warning 'Uninstall failed; restoring the verified installed files from temporary staging.'
+            Restore-InstalledStaging $targetRoot $stagingRoot $stateMap
             Write-Step 'Uninstall rollback completed successfully.'
         }
         catch {

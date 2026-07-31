@@ -9,7 +9,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $ReleaseName = 'X-Eve Living Universe'
-$ReleaseVersion = 'v0.2.2'
+$ReleaseVersion = 'v0.2.3'
 $BaselineVersion = 'v0.12.3.1'
 $ExpectedArchiveSha256 = '1DEB61A51F808D9F2B330214DA64EC297D9EE5F96EE4B8265692A65F35EEFC1E'
 $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
@@ -731,6 +731,36 @@ try {
             }
         }
     )
+
+    Write-Step 'Recording the final deployment state for Docker overlay files'
+    $stateIndex = @{}
+    foreach ($entry in $stateFiles) {
+        $stateIndex[[string]$entry.path] = $entry
+    }
+    foreach ($relative in $dockerOverlayFiles) {
+        $targetPath = Resolve-TargetChild $targetRoot $relative
+        if (-not (Test-Path -LiteralPath $targetPath -PathType Leaf)) {
+            throw "Docker overlay target is missing after application: $relative"
+        }
+        $actualSha = Get-Sha256 $targetPath
+        $item = Get-Item -LiteralPath $targetPath -Force
+        if ($stateIndex.ContainsKey($relative)) {
+            $entry = $stateIndex[$relative]
+            $entry.sha256 = $actualSha
+            $entry.size = [int64]$item.Length
+            $entry.source = 'overlay'
+        }
+        else {
+            $stateIndex[$relative] = [ordered]@{
+                path = $relative
+                sha256 = $actualSha
+                size = [int64]$item.Length
+                kind = 'modified'
+                source = 'overlay'
+            }
+        }
+    }
+    $stateFiles = @($stateIndex.Values | Sort-Object { $_.path })
     $relativeBackupRoot = $backupRoot.Substring($installRoot.Length).TrimStart('\', '/').Replace('\', '/')
     $installState = [ordered]@{
         schemaVersion = 1

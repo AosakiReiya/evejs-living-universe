@@ -333,7 +333,10 @@ $forbiddenRootNames = @(
   'tools'
 )
 
-$rootItems = @(Get-ChildItem -LiteralPath $RepositoryRoot -Force | Where-Object { $_.Name -ne '.git' })
+$rootItems = @(
+  Get-ChildItem -LiteralPath $RepositoryRoot -Force |
+    Where-Object { $_.Name -ne '.git' -and $_.Name -ne 'tmp' }
+)
 foreach ($item in $rootItems) {
   $nameLower = $item.Name.ToLowerInvariant()
   if ($forbiddenRootNames -contains $nameLower) {
@@ -356,7 +359,8 @@ $repositoryItems = @(
   Get-ChildItem -LiteralPath $RepositoryRoot -Force -Recurse |
     Where-Object {
       $relative = Convert-ToRepositoryPath -FullName $_.FullName
-      $relative -ne '.git' -and -not $relative.StartsWith('.git/', [System.StringComparison]::OrdinalIgnoreCase)
+      $relative -ne '.git' -and -not $relative.StartsWith('.git/', [System.StringComparison]::OrdinalIgnoreCase) -and
+      $relative -ne 'tmp' -and -not $relative.StartsWith('tmp/', [System.StringComparison]::OrdinalIgnoreCase)
     }
 )
 
@@ -435,7 +439,8 @@ $patchFiles = @(
   Get-ChildItem -LiteralPath $RepositoryRoot -Force -Recurse -File -Filter '*.patch' |
     Where-Object {
       $relative = Convert-ToRepositoryPath -FullName $_.FullName
-      -not $relative.StartsWith('.git/', [System.StringComparison]::OrdinalIgnoreCase)
+      -not $relative.StartsWith('.git/', [System.StringComparison]::OrdinalIgnoreCase) -and
+      -not $relative.StartsWith('tmp/', [System.StringComparison]::OrdinalIgnoreCase)
     }
 )
 
@@ -638,7 +643,8 @@ $jsonManifestFiles = @(
   Get-ChildItem -LiteralPath $RepositoryRoot -Force -Recurse -File -Filter '*.json' |
     Where-Object {
       $relative = Convert-ToRepositoryPath -FullName $_.FullName
-      -not $relative.StartsWith('.git/', [System.StringComparison]::OrdinalIgnoreCase)
+      -not $relative.StartsWith('.git/', [System.StringComparison]::OrdinalIgnoreCase) -and
+      -not $relative.StartsWith('tmp/', [System.StringComparison]::OrdinalIgnoreCase)
     }
 )
 
@@ -816,7 +822,12 @@ foreach ($manifestName in @('baseline-manifest.json', 'installed-manifest.json')
 
 $checksumFiles = @(
   Get-ChildItem -LiteralPath $RepositoryRoot -Force -Recurse -File |
-    Where-Object { $_.Name -ceq 'SHA256SUMS' }
+    Where-Object {
+      $relative = Convert-ToRepositoryPath -FullName $_.FullName
+      $_.Name -ceq 'SHA256SUMS' -and
+      -not $relative.StartsWith('.git/', [System.StringComparison]::OrdinalIgnoreCase) -and
+      -not $relative.StartsWith('tmp/', [System.StringComparison]::OrdinalIgnoreCase)
+    }
 )
 
 if ($checksumFiles.Count -gt 1) {

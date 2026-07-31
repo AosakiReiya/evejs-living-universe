@@ -1,5 +1,15 @@
 # Changelog
 
+## [v0.2.3] - 2026-07-31
+
+Compatible with EVEJS v0.12.3.1.
+
+- Install/verify/uninstall now track Docker overlay files in the install state
+- Verify gains a `-PatchIntegrity` mode for pure patch-tree validation
+- Uninstall restores overlay files correctly and leaves the baseline intact
+- Restructure `.gitignore` to a standard blacklist style
+- Audit excludes the local `tmp/` working directory
+
 ## [v0.2.2] - 2026-07-30
 
 Compatible with EVEJS v0.12.3.1.

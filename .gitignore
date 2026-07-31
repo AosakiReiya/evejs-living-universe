@@ -1,89 +1,51 @@
-# This repository intentionally publishes only the X-Eve delta and its public
-# documentation/install tooling. Everything else is ignored by default.
-/*
+# Local upstream dependency cache (clean EveJS tree for development)
+tmp/
 
-!/.gitignore
-!/.gitattributes
-!/README
-!/README.md
-!/README.txt
-!/LICENSE
-!/LICENSE.md
-!/LICENSE.txt
-!/CHANGELOG
-!/CHANGELOG.md
-!/CHANGELOG.txt
+# Node dependencies
+node_modules/
 
-!/.github/
-!/.github/**
-!/docs/
-!/docs/**
-!/installer/
-!/installer/**
-!/patches/
-!/patches/**
-!/scripts/
-!/scripts/**
+# Build output
+dist/
+build/
+out/
+bin/
 
-# Never admit complete source trees, generated state, machine-local settings,
-# deployment material, databases, logs, certificates, or credentials—even if
-# they are accidentally placed inside an allowed public-package directory.
-**/server/
-**/externalservices/
-**/docker/
-**/tools/
-**/deploy/
-**/deployment/
-**/remote/
-**/PlayerConnect/
-**/node_modules/
-**/_local/
-**/runtime/
-**/runtime-data/
-**/runtime_data/
-**/database/
-**/databases/
-**/cert/
-**/certs/
-**/certificate/
-**/certificates/
-**/logs/
-**/secrets/
-**/private/
+# Runtime data
+runtime/
+runtime-data/
+database/
+*.db
+*.db3
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
 
-**/.env
-**/.env.*
-**/evejs.config.local.json
-**/*config-local*
-**/*config.local*
-**/*.local.json
+# Logs
+*.log
 
-**/*.db
-**/*.db3
-**/*.sqlite
-**/*.sqlite3
-**/*.sqlite-wal
-**/*.sqlite-shm
-**/*.log
+# Environment / local config
+.env
+.env.*
+*.local
+*.local.json
+evejs.config.local.json
 
-**/*.pem
-**/*.key
-**/*.pfx
-**/*.p12
-**/*.ppk
-**/*.crt
-**/*.cer
-**/*.der
-**/*.jks
-**/*.keystore
-**/id_rsa
-**/id_dsa
-**/id_ecdsa
-**/id_ed25519
-**/authorized_keys
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
 
-# Docker-overlay files are part of the patch infrastructure
-!/patches/docker-overlay/docker/
-!/patches/docker-overlay/server/
-!/patches/docker-overlay/server/src/
-!/patches/docker-overlay/server/src/gameStore/
+# Certificates / secrets
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+authorized_keys

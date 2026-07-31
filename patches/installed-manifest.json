@@ -1,6 +1,6 @@
 {
     "schemaVersion":  1,
-    "pluginVersion":  "v0.2.2",
+    "pluginVersion":  "v0.2.3",
     "patchFile":  "x-eve-living-universe.patch",
     "patchSha256":  "5448DDB82E0715C8C953F86944BE1ADD48710089BBA4EA03D3A2EC1216C11083",
     "fileCount":  200,
